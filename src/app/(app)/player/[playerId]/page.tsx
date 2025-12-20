@@ -1354,12 +1354,12 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
     fumbles: sleeperStats.fum,
     fumblesLost: sleeperStats.fum_lost,
 
-    // Kicking (for K)
-    fgm: sleeperStats.fg_made,
-    fga: sleeperStats.fg_att,
-    xpm: sleeperStats.xp_made,
+    // Kicking (for K players)
+    fgm: sleeperStats.fg_made || sleeperStats.fg,
+    fga: sleeperStats.fg_att || sleeperStats.fg,
+    xpm: sleeperStats.xp_made || sleeperStats.xp,
 
-    // Defense (for DEF)
+    // Defense (for DEF players)
     pointsAgainst: sleeperStats.pts_allow,
     sacks: sleeperStats.def_sack,
     defensiveInts: sleeperStats.def_int,
@@ -1369,8 +1369,9 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
     returnTds: sleeperStats.ret_td,
     blockedKicks: sleeperStats.def_blk_kick,
 
-    // Opponent (for display)
+    // Common
     opponent: sleeperStats.opp,
+    fpts: sleeperStats.pts_ppr || sleeperStats.pts_half_ppr || sleeperStats.pts_std,
   };
 };
 
