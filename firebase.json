@@ -1,0 +1,21 @@
+{
+  "hosting": [
+    {
+      "site": "studio-4619411114-e9a34",
+      "public": ".next",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "rewrites": [
+        {
+          "source": "**",
+          "function": "nextjsServer"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "source": ".",
+    "runtime": "nodejs20"
+  }
+}
