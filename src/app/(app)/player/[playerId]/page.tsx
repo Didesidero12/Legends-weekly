@@ -1369,8 +1369,9 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
     returnTds: sleeperStats.ret_td,
     blockedKicks: sleeperStats.def_blk_kick,
 
-    // Common
+ // Common
     opponent: sleeperStats.opp,
+    fpts: sleeperStats.pts_ppr || sleeperStats.pts_half_ppr || sleeperStats.pts_std,
   };
 };
 
