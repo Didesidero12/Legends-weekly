@@ -1236,8 +1236,7 @@ useEffect(() => {
 
       // Fetch current week live stats (for live section)
       const weeklyStats = await fetchWeeklyPlayerStats(year, currentWeek);
-    //   const currentWeekStats = weeklyStats[sleeperId];
-const playerStats = stats[sleeperId] || Object.entries(stats).find(([key, val]) => key.includes(sleeperId))?.[1];
+      const currentWeekStats = weeklyStats[sleeperId];
 
       // Parallel fetch game log for all weeks
       const gameLogPromises = Array.from({ length: currentWeek }, (_, i) => {
@@ -1332,6 +1331,7 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
   if (!sleeperStats) return {};
 
   return {
+    // Passing
     passingAttempts: sleeperStats.pass_att,
     completions: sleeperStats.pass_cmp,
     passingYards: sleeperStats.pass_yd,
@@ -1339,22 +1339,38 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
     interceptions: sleeperStats.pass_int,
     sacksTaken: sleeperStats.pass_sack,
 
+    // Rushing
     rushingAttempts: sleeperStats.rush_att,
     rushingYards: sleeperStats.rush_yd,
     rushingTds: sleeperStats.rush_td,
 
+    // Receiving
+    targets: sleeperStats.rec_tgt,
     receptions: sleeperStats.rec,
-    targets: sleeperStats.tgt,
     receivingYards: sleeperStats.rec_yd,
     receivingTds: sleeperStats.rec_td,
 
+    // Fumbles
     fumbles: sleeperStats.fum,
     fumblesLost: sleeperStats.fum_lost,
 
-    // Defense / Kicking if needed later
+    // Kicking (for K)
+    fgm: sleeperStats.fg_made,
+    fga: sleeperStats.fg_att,
+    xpm: sleeperStats.xp_made,
+
+    // Defense (for DEF)
     pointsAgainst: sleeperStats.pts_allow,
     sacks: sleeperStats.def_sack,
-    // etc.
+    defensiveInts: sleeperStats.def_int,
+    defensiveFumbleRecoveries: sleeperStats.def_fum_rec,
+    safeties: sleeperStats.def_safe,
+    defensiveTds: sleeperStats.def_td,
+    returnTds: sleeperStats.ret_td,
+    blockedKicks: sleeperStats.def_blk_kick,
+
+    // Opponent (for display)
+    opponent: sleeperStats.opp,
   };
 };
 
