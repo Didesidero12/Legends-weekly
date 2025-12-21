@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RosterContext } from '@/context/RosterContext';
 import { useUser } from '@/firebase/provider';
-import { doc, updateDoc, setDoc } from 'firebase/firestore'; // Added setDoc
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
+import type { CardTier, LegendaryCard } from '@/lib/types';
 
 const mechanics = [
   { value: 'pure-skill', label: '1. Pure Skill', description: 'Top 50% of scoreboard get 1 pack' },
@@ -55,18 +56,26 @@ export default function LegendaryCardSettingsPage() {
 
   const cardSettings = league.cardSettings || { mechanic: 'hybrid-5050', playoffBonus: true, legendDecay: false, nerfRule: false, tradeTax: false, playoffReset: false };
 
-  const handleSave = async () => {
-    const updates = { cardSettings };
-    const updatedLeagues = leagues.map(l => l.id === leagueId ? { ...l, ...updates } : l);
-    setLeagues(updatedLeagues);
+const handleSave = async () => {
+  if (!leagueId) {
+    toast({ variant: "destructive", title: "Error", description: "League ID not found" });
+    return;
+  }
 
-    try {
-      await updateDoc(doc(firestore, 'leagues', leagueId), updates);
-      router.back();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const updates = { cardSettings };
+  const updatedLeagues = leagues.map(l => l.id === leagueId ? { ...l, ...updates } : l);
+  setLeagues(updatedLeagues);
+
+  try {
+    // Assert leagueId is string — TypeScript now knows it's not undefined
+    await updateDoc(doc(firestore, 'leagues', leagueId as string), updates);
+    toast({ title: "Card Settings Saved" });
+    router.back();
+  } catch (err) {
+    console.error(err);
+    toast({ variant: "destructive", title: "Save Failed", description: "Try again" });
+  }
+};
 
   const updateSetting = (key: keyof typeof cardSettings, value: any) => {
     const newSettings = { ...cardSettings, [key]: value };
@@ -75,6 +84,15 @@ export default function LegendaryCardSettingsPage() {
   };
 
 const handleManualAddCard = async () => {
+  if (!leagueId) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "League ID not found",
+    });
+    return;
+  }
+
   if (!manualTeamId || !manualTier || !manualPosition) {
     toast({
       variant: "destructive",
@@ -85,7 +103,7 @@ const handleManualAddCard = async () => {
   }
 
   const newCard: LegendaryCard = {
-    id: `manual-${Date.now()}`,  // ← Fixed: no undefined 'i'
+    id: `manual-${Date.now()}`,
     playerId: 'TBD',
     playerName: 'TBD',
     position: manualPosition,
@@ -94,18 +112,20 @@ const handleManualAddCard = async () => {
     historicalYear: 0,
     historicalPoints: 0,
     status: 'unplayed',
-    pendingSlotId: null,
+    pendingSlotId: undefined,
   };
 
   const teamRef = doc(firestore, 'leagues', leagueId, 'teams', manualTeamId, 'cards', newCard.id);
-  
+
   try {
     await setDoc(teamRef, newCard);
     toast({
       title: "Card Added!",
       description: `${manualTier} ${manualPosition} card added manually`,
     });
+    // Reset form if you have reset logic
   } catch (err) {
+    console.error(err);
     toast({
       variant: "destructive",
       title: "Failed to add card",

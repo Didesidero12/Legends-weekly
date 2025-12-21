@@ -75,8 +75,8 @@ function PlayerRow({
   opponentCards = [],
   slotIndex 
 }: { 
-  userPlayer: Player | null;     // ← CHANGE from RosterSlot to Player | null
-  opponentPlayer: Player | null; // ← CHANGE
+  userPlayer: Player | null;           // ← Change from RosterSlot or Player to Player | null
+  opponentPlayer: Player | null;       // ← Same
   position: string; 
   onPlayerClick: (player: Player | null) => void; // ← Allow null
   userCards: LegendaryCard[];
@@ -329,7 +329,7 @@ useEffect(() => {
                     userPlayer={userRoster.starters[index] ?? null}
                     opponentPlayer={opponentRoster.starters[index] ?? null}
                     position={pos}
-                    onPlayerClick={onPlayerClick}
+                    onPlayerClick={(player) => player && onPlayerClick(player)}
                     userCards={userCards}
                     opponentCards={opponentCards}
                     slotIndex={index}
@@ -343,16 +343,18 @@ useEffect(() => {
               <h3 className="mb-2 font-semibold text-lg px-4 sm:px-0">Bench</h3>
               <Table>
                 <TableBody>
-                  {Array.from({ length: benchSize }).map((_, index) => (
-                    <PlayerRow 
-                      key={`bench-${index}`}
-                      userPlayer={userRoster.bench[index] ?? null}
-                      opponentPlayer={opponentRoster.bench[index] ?? null}
-                      position="BE"
-                      onPlayerClick={onPlayerClick}
-                      slotIndex={index}
-                    />
-                  ))}
+                {Array.from({ length: benchSize }).map((_, index) => (
+                  <PlayerRow 
+                    key={`bench-${index}`}
+                    userPlayer={userRoster.bench[index] ?? null}
+                    opponentPlayer={opponentRoster.bench[index] ?? null}
+                    position="BE"
+                    onPlayerClick={(player) => player && onPlayerClick(player)}
+                    userCards={userCards}
+                    opponentCards={opponentCards}
+                    slotIndex={index}
+                  />
+                ))}
                 </TableBody>
               </Table>
             </div>
@@ -367,7 +369,9 @@ useEffect(() => {
                       userPlayer={userRoster.ir[index] ?? null}
                       opponentPlayer={opponentRoster.ir[index] ?? null}
                       position="IR"
-                      onPlayerClick={onPlayerClick}
+                      onPlayerClick={(player) => player && onPlayerClick(player)}
+                      userCards={userCards}
+                      opponentCards={opponentCards}
                       slotIndex={index}
                     />
                   ))}
@@ -537,9 +541,9 @@ useEffect(() => {
         starterSlots={starterSlots}
         benchSize={benchSize}
         irSize={irSize}
-        onPlayerClick={setSelectedPlayer}
-        userCards={userCardsData ?? []}          // ← This is correct!
-        opponentCards={opponentCardsData ?? []}   // ← This is correct!
+        onPlayerClick={(player) => player && setSelectedPlayer(player)}
+        userCards={userCardsData ?? []}
+        opponentCards={opponentCardsData ?? []}
       />
 
        <LeagueScoresSheet 

@@ -307,49 +307,51 @@ updateTeamRoster(leagueId, userTeam.id, { ...roster, starters: newStarters, benc
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPlayers.filter(p => position === 'ALL' || p.position === position).map(player => (
-                    <TableRow key={player.id}>
+                {filteredPlayers
+                  .filter(p => position === 'ALL' || p.position === position)
+                  .map(p => (  // ← Change 'player' to 'p'
+                    <TableRow key={p.id}>
                       <TableCell>
-<div className="flex items-center gap-3">
-<img 
-  src={player.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
-  alt={player.name} 
-  className="w-10 h-10 rounded-full object-cover"
-  onError={(e) => {
-    e.currentTarget.src = 'https://picsum.photos/seed/fallback/64/64';
-  }}
-/>
-  <div>
-    <div className="flex items-center gap-2">
-      <button onClick={() => setSelectedPlayer(player)} className="font-medium hover:underline">{player.name}</button>
-      <TeamHelmet team={player.nflTeam} className="w-4 h-4" />
-      <span className="text-xs text-muted-foreground">{player.position}</span>
-      <PlayerStatus status={player.status} />
-    </div>
-    <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
-      <span>{player.rosterPercentage ?? 0}% Rost</span>
-      <span>{player.startPercentage ?? 0}% Start</span>
-    </div>
-    <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
-      <span>{player.gameTime ?? '--'}</span>
-      <span className={getRankColor(player.opponent?.rank ?? 32)}>
-        {player.opponent?.team ?? 'BYE'} ({player.opponent?.rank ?? '--'})
-      </span>
-    </div>
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
+                            alt={p.name} 
+                            className="w-10 h-10 rounded-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://picsum.photos/seed/fallback/64/64';
+                            }}
+                          />
+<div>
+  <div className="flex items-center gap-2">
+    <button onClick={() => setSelectedPlayer(p)} className="font-medium hover:underline">{p.name}</button>
+    <TeamHelmet team={p.nflTeam} className="w-4 h-4" />
+    <span className="text-xs text-muted-foreground">{p.position}</span>
+    <PlayerStatus status={p.status} />
+  </div>
+  <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
+    <span>{p.rosterPercentage ?? 0}% Rost</span>
+    <span>{p.startPercentage ?? 0}% Start</span>
+  </div>
+  <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
+    <span>{p.gameTime ?? '--'}</span>
+    <span className={getRankColor(p.opponent?.rank ?? 32)}>
+      {p.opponent?.team ?? 'BYE'} ({p.opponent?.rank ?? '--'})
+    </span>
   </div>
 </div>
+                      </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {(player.projectedPoints ?? 0).toFixed(2)}
+                        {(p.projectedPoints ?? 0).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {(player.actualPoints ?? 0).toFixed(2)}
+                        {(p.actualPoints ?? 0).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         {freeAgentMode || isUnlocked ? (
-                          <Button size="sm" variant="outline" onClick={() => handleAddPlayer(player)}>
-                            {freeAgentMode ? 'Add' : 'Claim'}
-                          </Button>
+<Button size="sm" variant="outline" onClick={() => handleAddPlayer(p)}>
+  {freeAgentMode ? 'Add' : 'Claim'}
+</Button>
                         ) : (
                           <TooltipProvider>
                             <Tooltip>
@@ -396,14 +398,14 @@ updateTeamRoster(leagueId, userTeam.id, { ...roster, starters: newStarters, benc
                         className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${playerToDrop?.id === p.id ? 'bg-destructive/20 border-destructive' : 'hover:bg-secondary/50'}`}
                       >
                         <div className="flex items-center gap-3">
-<img 
-  src={player.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
-  alt={player.name} 
-  className="w-10 h-10 rounded-full object-cover"
-  onError={(e) => {
-    e.currentTarget.src = 'https://picsum.photos/seed/fallback/64/64';
-  }}
-/>
+                        <img 
+                          src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
+                          alt={p.name} 
+                          className="w-10 h-10 rounded-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://picsum.photos/seed/fallback/64/64';
+                          }}
+                        />
                           <div>
                             <div className="font-medium">{p.name} <span className="text-xs text-muted-foreground">{p.position}</span></div>
                             <div className="text-xs text-muted-foreground">{p.nflTeam}</div>

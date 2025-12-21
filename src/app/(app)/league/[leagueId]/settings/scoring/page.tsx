@@ -32,20 +32,25 @@ export default function ScoringSettingsPage() {
     defaultValues: { scoringSettings: league.scoringSettings },
   });
 
-  const categories = Object.keys(league.scoringSettings) as (keyof typeof league.scoringSettings)[];
+const onSubmit = async (data: { scoringSettings: typeof league.scoringSettings }) => {
+  if (!leagueId) {
+    toast({ variant: "destructive", title: "Error", description: "League ID not found" });
+    return;
+  }
 
-  const onSubmit = async (data: { scoringSettings: typeof league.scoringSettings }) => {
-    const updates = { scoringSettings: data.scoringSettings };
-    const updatedLeagues = leagues.map(l => l.id === leagueId ? { ...l, ...updates } : l);
-    setLeagues(updatedLeagues);
+  const updates = { scoringSettings: data.scoringSettings };
+  const updatedLeagues = leagues.map(l => l.id === leagueId ? { ...l, ...updates } : l);
+  setLeagues(updatedLeagues);
 
-    try {
-      await updateDoc(doc(firestore, 'leagues', leagueId), updates);
-      router.back();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  try {
+    await updateDoc(doc(firestore, 'leagues', leagueId), updates);
+    toast({ title: "Scoring Settings Saved" });
+    router.back();
+  } catch (err) {
+    console.error(err);
+    toast({ variant: "destructive", title: "Save Failed", description: "Try again" });
+  }
+};
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">

@@ -211,41 +211,41 @@ function RosterTable({
                                     player={player} 
                                     onClick={() => onPlayerClick(player)} 
                                     overrideName={activeCard?.playerName}
-secondaryInfo={
-  <>
-    <div className="flex items-center gap-2">
-      <PlayerStatus status={player.status} />
-      {activeTierStyles && (
-        <Badge variant="secondary" className={cn(activeTierStyles.badge, activeTierStyles.text)}>
-          <Crown className={cn("w-3 h-3 mr-1.5", activeTierStyles.crown)} />
-          {pendingCard ? `${pendingCard.tier} Pending` : `${activeCard?.tier} Active`}
-        </Badge>
-      )}
-      {title === 'Injured Reserve' && player.status !== 'IR' && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Player is not on IR and must be moved.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
-    </div>
-    <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
-      <span>{player.rosterPercentage ?? 0}% Rost</span>
-      <span className='ml-2'>{player.startPercentage ?? 0}% Start</span>
-    </div>
-    <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
-      <span>{player.gameTime ?? '--'}</span>
-      <span className={cn('ml-2', getRankColor(player.opponent?.rank ?? 0))}>
-        {player.opponent?.team ?? '--'} ({player.opponent?.rank ?? '-'})
-      </span>
-    </div>
-  </>
-}
+                                    secondaryInfo={
+                                      <>
+                                        <div className="flex items-center gap-2">
+                                          <PlayerStatus status={player.status} />
+                                          {activeTierStyles && (
+                                            <Badge variant="secondary" className={cn(activeTierStyles.badge, activeTierStyles.text)}>
+                                              <Crown className={cn("w-3 h-3 mr-1.5", activeTierStyles.crown)} />
+                                              {pendingCard ? `${pendingCard.tier} Pending` : `${activeCard?.tier} Active`}
+                                            </Badge>
+                                          )}
+                                          {title === 'Injured Reserve' && player.status !== 'IR' && (
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger>
+                                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>Player is not on IR and must be moved.</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
+                                          <span>{player.rosterPercentage ?? 0}% Rost</span>
+                                          <span className='ml-2'>{player.startPercentage ?? 0}% Start</span>
+                                        </div>
+                                        <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
+                                          <span>{player.gameTime ?? '--'}</span>
+                                          <span className={cn('ml-2', getRankColor(player.opponent?.rank ?? 0))}>
+                                            {player.opponent?.team ?? '--'} ({player.opponent?.rank ?? '-'})
+                                          </span>
+                                        </div>
+                                      </>
+                                    }
                                 />
                             </div>
                         </TableCell>
@@ -899,32 +899,32 @@ const totalActualPoints = useMemo(() => {
     <>
       <div className="space-y-6">
         
-<div className="flex items-center justify-between">
-  <div className='flex items-center gap-4'>
-    <Image 
-      src={userTeam.logoUrl || 'https://picsum.photos/seed/team-fallback/64/64'} 
-      alt={`${userTeam.name} logo`} 
-      width={64} 
-      height={64} 
-      className="rounded-full" 
-    />
-    <div>
-      <div className="flex items-center gap-2">
-        <h1 className="text-lg font-semibold md:text-2xl font-headline">{userTeam.name}</h1>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setTeamInfoSheetOpen(true)}>
-          <Edit className="h-4 w-4" />
-        </Button>
+      <div className="flex items-center justify-between">
+        <div className='flex items-center gap-4'>
+          <Image 
+            src={userTeam.logoUrl || 'https://picsum.photos/seed/team-fallback/64/64'} 
+            alt={`${userTeam.name} logo`} 
+            width={64} 
+            height={64} 
+            className="rounded-full" 
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold md:text-2xl font-headline">{userTeam.name}</h1>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setTeamInfoSheetOpen(true)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">{userTeam.owner} - {userTeam.record}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold">{totalActualPoints.toFixed(2)}</div>
+          <div className="text-xs text-muted-foreground">
+            Proj: {totalProjectedPoints.toFixed(2)}
+          </div>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">{userTeam.owner} - {userTeam.record}</p>
-    </div>
-  </div>
-  <div className="text-right">
-    <div className="text-2xl font-bold">{totalActualPoints.toFixed(2)}</div>
-    <div className="text-xs text-muted-foreground">
-      Proj: {totalProjectedPoints.toFixed(2)}
-    </div>
-  </div>
-</div>
 
         <Card>
             <CardContent className="p-0">
@@ -1055,54 +1055,54 @@ const totalActualPoints = useMemo(() => {
                     const slot = (swapCandidate.to === 'starters' || (swapCandidate.player === null)) && starterIndex > -1 ? starterSlots[starterIndex] : 'BE';
 
                     return (
- <Card 
-  key={p.id} 
-  onClick={() => { 
-    if (requiresDrop) {
-      setMoveFromIrRequiresDrop(p);
-      setTargetPlayer(null);
-    } else {
-      setTargetPlayer(p);
-    }
-    setTargetSlot(null); 
-  }} 
-  className={cn(
-    "flex items-center justify-between p-3 cursor-pointer transition-colors",
-    targetPlayer?.id === p.id ? 'bg-primary/20 border-primary' : 'hover:bg-secondary/50',
-    moveFromIrRequiresDrop?.id === p.id && 'bg-destructive/20 border-destructive'
-  )}
->
-<div className="flex items-center gap-3">
-  {p ? (
-    <>
-      <Image 
-        src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
-        alt={p.name} 
-        width={40} 
-        height={40} 
-        className="rounded-full object-cover"
-      />
-      <div>
-        <div className="flex items-center gap-2">
-          <div className="font-medium">{p.name}</div>
-          {slot !== 'BE' && <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-md">{slot}</span>}
-        </div>
-        <div className="text-xs text-muted-foreground">{p.nflTeam} - {p.position}</div>
-      </div>
-    </>
-  ) : (
-    <>
-      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-        <span className="text-muted-foreground text-xs">—</span>
-      </div>
-      <div>
-        <div className="font-medium italic text-muted-foreground">Empty Slot</div>
-      </div>
-    </>
-  )}
-</div>
-  <ArrowRightLeft className={cn("h-5 w-5 text-muted-foreground", requiresDrop && "text-destructive")} />
-</Card>
+                      <Card 
+                        key={p.id} 
+                        onClick={() => { 
+                          if (requiresDrop) {
+                            setMoveFromIrRequiresDrop(p);
+                            setTargetPlayer(null);
+                          } else {
+                            setTargetPlayer(p);
+                          }
+                          setTargetSlot(null); 
+                        }} 
+                        className={cn(
+                          "flex items-center justify-between p-3 cursor-pointer transition-colors",
+                          targetPlayer?.id === p.id ? 'bg-primary/20 border-primary' : 'hover:bg-secondary/50',
+                          moveFromIrRequiresDrop?.id === p.id && 'bg-destructive/20 border-destructive'
+                        )}
+                      >
+                      <div className="flex items-center gap-3">
+                        {p ? (
+                          <>
+                            <Image 
+                              src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
+                              alt={p.name} 
+                              width={40} 
+                              height={40} 
+                              className="rounded-full object-cover"
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium">{p.name}</div>
+                                {slot !== 'BE' && <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-md">{slot}</span>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{p.nflTeam} - {p.position}</div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                              <span className="text-muted-foreground text-xs">—</span>
+                            </div>
+                            <div>
+                              <div className="font-medium italic text-muted-foreground">Empty Slot</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                        <ArrowRightLeft className={cn("h-5 w-5 text-muted-foreground", requiresDrop && "text-destructive")} />
+                      </Card>
                     )
                   })
                 ) : (
