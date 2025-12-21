@@ -1331,46 +1331,16 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
   if (!sleeperStats) return {};
 
   return {
-    // Passing
-    passingAttempts: sleeperStats.pass_att,
-    completions: sleeperStats.pass_cmp,
-    passingYards: sleeperStats.pass_yd,
-    passingTds: sleeperStats.pass_td,
-    interceptions: sleeperStats.pass_int,
-    sacksTaken: sleeperStats.pass_sack,
-
-    // Rushing
-    rushingAttempts: sleeperStats.rush_att,
-    rushingYards: sleeperStats.rush_yd,
-    rushingTds: sleeperStats.rush_td,
-
-    // Receiving
-    targets: sleeperStats.rec_tgt,
-    receptions: sleeperStats.rec,
-    receivingYards: sleeperStats.rec_yd,
-    receivingTds: sleeperStats.rec_td,
-
-    // Fumbles
-    fumbles: sleeperStats.fum,
-    fumblesLost: sleeperStats.fum_lost,
-
-    // Kicking (for K)
-    fgm: sleeperStats.fg_made || sleeperStats.fg,
-    fga: sleeperStats.fg_att,
-    xpm: sleeperStats.xp_made,
-
-    // Defense (for DEF)
-    pointsAgainst: sleeperStats.pts_allow,
-    sacks: sleeperStats.def_sack,
-    defensiveInts: sleeperStats.def_int,
-    defensiveFumbleRecoveries: sleeperStats.def_fum_rec,
-    safeties: sleeperStats.def_safe,
-    defensiveTds: sleeperStats.def_td,
-    returnTds: sleeperStats.ret_td,
-    blockedKicks: sleeperStats.def_blk_kick,
-
-    // Common
-    opponent: sleeperStats.opp,
+    passingYards: sleeperStats.pass_yd || 0,
+    passingTouchdowns: sleeperStats.pass_td || 0,
+    rushingYards: sleeperStats.rush_yd || 0,
+    rushingTouchdowns: sleeperStats.rush_td || 0,
+    receivingYards: sleeperStats.rec_yd || 0,
+    receivingTouchdowns: sleeperStats.rec_td || 0,
+    fieldGoalsMade: sleeperStats.fg_made || 0,
+    pointsAgainst: sleeperStats.pts_allow || 0,
+    sacks: sleeperStats.def_sack || 0,
+    // Add more fields as needed for your GameLogEntry type, e.g., interceptions, fumbles, etc.
   };
 };
 
