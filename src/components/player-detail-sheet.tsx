@@ -1,7 +1,6 @@
 
 
 'use client';
-import { players } from '@/lib/mock-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TeamHelmet } from '@/components/team-helmet';

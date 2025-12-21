@@ -1033,13 +1033,6 @@ function StatsView({ player, league }: { player: Player | null; league: League |
     );
   }
 
-  // We'll get these from the main component later
-  const currentWeekLiveStats = (player as any).currentWeekLiveStats;
-  const liveGameEntry = currentWeekLiveStats ? mapSleeperStatsToGameLog(currentWeekLiveStats) : null;
-  const livePoints = liveGameEntry 
-    ? calculateFantasyPoints(player, liveGameEntry as GameLogEntry, league.scoringSettings) 
-    : 0;
-
   const offensivePositions = ['QB', 'RB', 'WR', 'TE', 'K', 'FLEX', 'HC'];
   const defensivePositions = ['DEF', 'DT', 'DE', 'LB', 'DL', 'CB', 'S', 'DB', 'DP'];
 
@@ -1326,59 +1319,6 @@ useEffect(() => {
   if (!player) {
     return <div className="p-6"><p>Player not found in live data.</p></div>;
   }
-
-const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
-  if (!sleeperStats) return {};
-
-  return {
-    // Passing
-    passingAttempts: sleeperStats.pass_att ?? 0,
-    completions: sleeperStats.pass_cmp ?? 0,
-    passingYards: sleeperStats.pass_yd ?? 0,
-    passingTds: sleeperStats.pass_td ?? 0,
-    interceptions: sleeperStats.pass_int ?? 0,
-    sacksTaken: sleeperStats.pass_sack ?? 0,
-
-    // Rushing
-    rushingAttempts: sleeperStats.rush_att ?? 0,
-    rushingYards: sleeperStats.rush_yd ?? 0,
-    rushingTds: sleeperStats.rush_td ?? 0,
-
-    // Receiving
-    targets: sleeperStats.rec_tgt ?? 0,
-    receptions: sleeperStats.rec ?? 0,
-    receivingYards: sleeperStats.rec_yd ?? 0,
-    receivingTds: sleeperStats.rec_td ?? 0,
-
-    // Fumbles
-    fumbles: sleeperStats.fum ?? 0,
-    fumblesLost: sleeperStats.fum_lost ?? 0,
-
-    // Kicking
-    fgm: sleeperStats.fg_made ?? sleeperStats.fg ?? 0,
-    fga: sleeperStats.fg_att ?? 0,
-    xpm: sleeperStats.xp_made ?? 0,
-
-    // Defense
-    pointsAgainst: sleeperStats.pts_allow ?? 0,
-    sacks: sleeperStats.def_sack ?? 0,
-    defensiveInts: sleeperStats.def_int ?? 0,
-    defensiveFumbleRecoveries: sleeperStats.def_fum_rec ?? 0,
-    safeties: sleeperStats.def_safe ?? 0,
-    defensiveTds: sleeperStats.def_td ?? 0,
-    returnTds: sleeperStats.ret_td ?? 0,
-    blockedKicks: sleeperStats.def_blk_kick ?? 0,
-
-    // Common
-    opponent: sleeperStats.opp,
-  };
-};
-
-const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => { ... };
-
-const currentWeekLiveStats = player?.sleeperId ? realWeeklyStats?.[player.sleeperId] : null;
-const liveGameEntry = currentWeekLiveStats ? mapSleeperStatsToGameLog(currentWeekLiveStats) : null;
-const livePoints = liveGameEntry ? calculateFantasyPoints(player, liveGameEntry as GameLogEntry, league.scoringSettings) : 0;
 
     return (
         <div className="space-y-6 p-6">
