@@ -1331,16 +1331,46 @@ const mapSleeperStatsToGameLog = (sleeperStats: any): Partial<GameLogEntry> => {
   if (!sleeperStats) return {};
 
   return {
-    passingYards: sleeperStats.pass_yd || 0,
-    passingTouchdowns: sleeperStats.pass_td || 0,
-    rushingYards: sleeperStats.rush_yd || 0,
-    rushingTouchdowns: sleeperStats.rush_td || 0,
-    receivingYards: sleeperStats.rec_yd || 0,
-    receivingTouchdowns: sleeperStats.rec_td || 0,
-    fieldGoalsMade: sleeperStats.fg_made || 0,
-    pointsAgainst: sleeperStats.pts_allow || 0,
-    sacks: sleeperStats.def_sack || 0,
-    // Add more fields as needed for your GameLogEntry type, e.g., interceptions, fumbles, etc.
+    // Passing
+    passingAttempts: sleeperStats.pass_att ?? 0,
+    completions: sleeperStats.pass_cmp ?? 0,
+    passingYards: sleeperStats.pass_yd ?? 0,
+    passingTds: sleeperStats.pass_td ?? 0,
+    interceptions: sleeperStats.pass_int ?? 0,
+    sacksTaken: sleeperStats.pass_sack ?? 0,
+
+    // Rushing
+    rushingAttempts: sleeperStats.rush_att ?? 0,
+    rushingYards: sleeperStats.rush_yd ?? 0,
+    rushingTds: sleeperStats.rush_td ?? 0,
+
+    // Receiving
+    targets: sleeperStats.rec_tgt ?? 0,
+    receptions: sleeperStats.rec ?? 0,
+    receivingYards: sleeperStats.rec_yd ?? 0,
+    receivingTds: sleeperStats.rec_td ?? 0,
+
+    // Fumbles
+    fumbles: sleeperStats.fum ?? 0,
+    fumblesLost: sleeperStats.fum_lost ?? 0,
+
+    // Kicking
+    fgm: sleeperStats.fg_made ?? sleeperStats.fg ?? 0,
+    fga: sleeperStats.fg_att ?? 0,
+    xpm: sleeperStats.xp_made ?? 0,
+
+    // Defense
+    pointsAgainst: sleeperStats.pts_allow ?? 0,
+    sacks: sleeperStats.def_sack ?? 0,
+    defensiveInts: sleeperStats.def_int ?? 0,
+    defensiveFumbleRecoveries: sleeperStats.def_fum_rec ?? 0,
+    safeties: sleeperStats.def_safe ?? 0,
+    defensiveTds: sleeperStats.def_td ?? 0,
+    returnTds: sleeperStats.ret_td ?? 0,
+    blockedKicks: sleeperStats.def_blk_kick ?? 0,
+
+    // Common
+    opponent: sleeperStats.opp,
   };
 };
 
