@@ -13,12 +13,22 @@ interface PlayerInfoProps {
     layout?: 'left' | 'right';
     secondaryInfo?: React.ReactNode;
     abbreviateName?: boolean;
+    overrideName?: string;  // ← ADD THIS LINE
 }
 
-export function PlayerInfo({ player, onClick, showImage = true, showPosition = true, layout = 'left', secondaryInfo, abbreviateName = false }: PlayerInfoProps) {
+export function PlayerInfo({ 
+  player, 
+  onClick, 
+  showImage = true, 
+  showPosition = true, 
+  layout = 'left', 
+  secondaryInfo, 
+  abbreviateName = false,
+  overrideName,  // ← ADD THIS
+}: PlayerInfoProps) {
     const layoutClasses = layout === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left';
     
-    const displayName = abbreviateName ? formatPlayerName(player.name) : player.name;
+    const displayName = overrideName ?? (abbreviateName ? formatPlayerName(player.name) : player.name);
 
     return (
         <div className={cn("flex items-center gap-3", layoutClasses)}>
