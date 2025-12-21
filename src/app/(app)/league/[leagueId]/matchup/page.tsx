@@ -71,21 +71,25 @@ function PlayerRow({
   opponentPlayer, 
   position, 
   onPlayerClick,
-  userCards = [],           // ← Default value goes HERE, in the destructuring
-  opponentCards = [],       // ← Same here
+  userCards = [],
+  opponentCards = [],
   slotIndex 
 }: { 
-  userPlayer: RosterSlot; 
-  opponentPlayer: RosterSlot; 
+  userPlayer: Player | null;     // ← CHANGE from RosterSlot to Player | null
+  opponentPlayer: Player | null; // ← CHANGE
   position: string; 
-  onPlayerClick: (player: Player) => void;
-  userCards: LegendaryCard[];       // ← Type only, no default
-  opponentCards: LegendaryCard[];   // ← Type only
+  onPlayerClick: (player: Player | null) => void; // ← Allow null
+  userCards: LegendaryCard[];
+  opponentCards: LegendaryCard[];
   slotIndex: number;
 }) {
   const [userScore, setUserScore] = useState(userPlayer?.actualPoints ?? 0);
   const [opponentScore, setOpponentScore] = useState(opponentPlayer?.actualPoints ?? 0);
   const isMobile = useIsMobile();
+
+  const userDisplayName = userPlayer ? userPlayer.name : 'Empty Slot';
+const opponentDisplayName = opponentPlayer ? opponentPlayer.name : 'Empty Slot';
+  
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -153,7 +157,9 @@ function PlayerRow({
             </div>
             <div className="flex-shrink-0 text-right">
               <div className="font-semibold text-sm">
-                {getSlotPoints(userPlayer, slotIndex, userCards, position).toFixed(2)}
+                {userPlayer 
+                  ? getSlotPoints(userPlayer, slotIndex, userCards, position).toFixed(2)
+                  : '--'}
               </div>
               <div className="text-muted-foreground text-xs">
                 {userPlayer?.projectedPoints?.toFixed(2) ?? '--'}
@@ -165,12 +171,6 @@ function PlayerRow({
             </div>
             
             <div className="flex-shrink-0 text-left">
-              <div className="font-semibold text-sm">
-                {getSlotPoints(opponentPlayer, slotIndex, opponentCards, position).toFixed(2)}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {opponentPlayer?.projectedPoints?.toFixed(2) ?? '--'}
-              </div>
             </div>
             <div className="flex-1 flex flex-col items-end text-right pl-2">
               {renderPlayer(opponentPlayer, opponentCards, true)}
@@ -326,12 +326,12 @@ useEffect(() => {
                 {starterSlots.map((pos, index) => (
                   <PlayerRow 
                     key={`starter-${index}`} 
-                    userPlayer={userRoster.starters[index]}
-                    opponentPlayer={opponentRoster.starters[index]}
+                    userPlayer={userRoster.starters[index] ?? null}
+                    opponentPlayer={opponentRoster.starters[index] ?? null}
                     position={pos}
                     onPlayerClick={onPlayerClick}
-                    userCards={userCards}           // ← Add this
-                    opponentCards={opponentCards}   // ← Add this
+                    userCards={userCards}
+                    opponentCards={opponentCards}
                     slotIndex={index}
                   />
                 ))}
@@ -343,16 +343,16 @@ useEffect(() => {
               <h3 className="mb-2 font-semibold text-lg px-4 sm:px-0">Bench</h3>
               <Table>
                 <TableBody>
-                    {Array.from({ length: benchSize }).map((_, index) => (
-                         <PlayerRow 
-                            key={`bench-${index}`}
-                            userPlayer={userRoster.bench[index]}
-                            opponentPlayer={opponentRoster.bench[index]}
-                            position={"BE"}
-                            onPlayerClick={onPlayerClick}
-                            slotIndex={index}
-                        />
-                    ))}
+                  {Array.from({ length: benchSize }).map((_, index) => (
+                    <PlayerRow 
+                      key={`bench-${index}`}
+                      userPlayer={userRoster.bench[index] ?? null}
+                      opponentPlayer={opponentRoster.bench[index] ?? null}
+                      position="BE"
+                      onPlayerClick={onPlayerClick}
+                      slotIndex={index}
+                    />
+                  ))}
                 </TableBody>
               </Table>
             </div>
@@ -361,16 +361,16 @@ useEffect(() => {
               <h3 className="mb-2 font-semibold text-lg px-4 sm:px-0">Injured Reserve</h3>
               <Table>
                 <TableBody>
-                    {Array.from({ length: irSize }).map((_, index) => (
-                         <PlayerRow 
-                            key={`ir-${index}`}
-                            userPlayer={userRoster.ir[index]}
-                            opponentPlayer={opponentRoster.ir[index]}
-                            position={"IR"}
-                            onPlayerClick={onPlayerClick}
-                            slotIndex={index}
-                        />
-                    ))}
+                  {Array.from({ length: irSize }).map((_, index) => (
+                    <PlayerRow 
+                      key={`ir-${index}`}
+                      userPlayer={userRoster.ir[index] ?? null}
+                      opponentPlayer={opponentRoster.ir[index] ?? null}
+                      position="IR"
+                      onPlayerClick={onPlayerClick}
+                      slotIndex={index}
+                    />
+                  ))}
                 </TableBody>
               </Table>
             </div>

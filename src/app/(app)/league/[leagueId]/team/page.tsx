@@ -1072,22 +1072,35 @@ const totalActualPoints = useMemo(() => {
     moveFromIrRequiresDrop?.id === p.id && 'bg-destructive/20 border-destructive'
   )}
 >
-  <div className="flex items-center gap-3">
-    <Image 
-      src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
-      alt={p.name} 
-      width={40} 
-      height={40} 
-      className="rounded-full" 
-    />
-    <div>
-      <div className="flex items-center gap-2">
-        <div className="font-medium">{p.name}</div>
-        {slot !== 'BE' && <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-md">{slot}</span>}
+<div className="flex items-center gap-3">
+  {p ? (
+    <>
+      <Image 
+        src={p.headshotUrl || 'https://picsum.photos/seed/fallback/64/64'} 
+        alt={p.name} 
+        width={40} 
+        height={40} 
+        className="rounded-full object-cover"
+      />
+      <div>
+        <div className="flex items-center gap-2">
+          <div className="font-medium">{p.name}</div>
+          {slot !== 'BE' && <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-1 rounded-md">{slot}</span>}
+        </div>
+        <div className="text-xs text-muted-foreground">{p.nflTeam} - {p.position}</div>
       </div>
-      <div className="text-xs text-muted-foreground">{p.nflTeam} - {p.position}</div>
-    </div>
-  </div>
+    </>
+  ) : (
+    <>
+      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+        <span className="text-muted-foreground text-xs">—</span>
+      </div>
+      <div>
+        <div className="font-medium italic text-muted-foreground">Empty Slot</div>
+      </div>
+    </>
+  )}
+</div>
   <ArrowRightLeft className={cn("h-5 w-5 text-muted-foreground", requiresDrop && "text-destructive")} />
 </Card>
                     )
