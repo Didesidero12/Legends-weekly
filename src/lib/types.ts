@@ -237,6 +237,7 @@ export interface LegendaryCard {
   status: 'unplayed' | 'pending' | 'played';
   playedWeek?: number;
   pendingSlotId?: string;
+  historicalPoints?: number;
 }
 
 export type CardSettings = {
