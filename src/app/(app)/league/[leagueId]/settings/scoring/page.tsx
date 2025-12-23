@@ -2,16 +2,15 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useContext, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { RosterContext } from '@/context/RosterContext';
+import { RosterContext, defaultScoringSettings } from '@/context/RosterContext'; // ← Import defaults
 import { useUser } from '@/firebase/provider';
 import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase/provider'; // Correct — matches your export
-import { Card, CardContent } from '@/components/ui/card';
+import { useFirestore } from '@/firebase/provider';
+import { useToast } from '@/hooks/use-toast'; // ← Import toast
 
 export default function ScoringSettingsPage() {
   const router = useRouter();
@@ -19,38 +18,77 @@ export default function ScoringSettingsPage() {
   const { leagues, setLeagues } = useContext(RosterContext);
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast(); // ← Destructure toast
 
   const league = useMemo(() => leagues.find(l => l.id === leagueId), [leagues, leagueId]);
 
-  if (!league) return <div className="p-6">Loading...</div>;
+  if (!league) {
+    return <div className="p-6 text-center">Loading league...</div>;
+  }
 
   const isOwner = user?.uid === league.ownerId;
 
-  if (!isOwner) return <div className="p-6">Only the owner can edit scoring settings.</div>;
+  // ← ALL HOOKS BEFORE ANY RETURN
+  const safeDefaults = defaultScoringSettings || {
+    Passing: [],
+    Rushing: [],
+    Receiving: [],
+    Kicking: [],
+    'Team Defense / Special Teams': [],
+    Miscellaneous: [],
+    'Defensive Players': [],
+    'Head Coach': [],
+    Punting: [],
+  };
+
+  const fullScoringSettings = useMemo(() => {
+    if (!league.scoringSettings) return safeDefaults;
+
+    const merged = { ...safeDefaults };
+    Object.keys(safeDefaults).forEach(category => {
+      merged[category] = league.scoringSettings[category] || safeDefaults[category];
+    });
+    return merged;
+  }, [league.scoringSettings]);
 
   const { control, handleSubmit, watch } = useForm({
-    defaultValues: { scoringSettings: league.scoringSettings },
+    defaultValues: {
+      scoringSettings: fullScoringSettings,
+    },
   });
 
-const onSubmit = async (data: { scoringSettings: typeof league.scoringSettings }) => {
-  if (!leagueId) {
-    toast({ variant: "destructive", title: "Error", description: "League ID not found" });
-    return;
+  if (!isOwner) {
+    return <div className="p-6 text-center">
+      <p className="text-lg">Only the league owner can edit scoring settings.</p>
+    </div>;
   }
 
-  const updates = { scoringSettings: data.scoringSettings };
-  const updatedLeagues = leagues.map(l => l.id === leagueId ? { ...l, ...updates } : l);
-  setLeagues(updatedLeagues);
+  const categories = Object.keys(fullScoringSettings);
 
-  try {
-    await updateDoc(doc(firestore, 'leagues', leagueId), updates);
-    toast({ title: "Scoring Settings Saved" });
-    router.back();
-  } catch (err) {
-    console.error(err);
-    toast({ variant: "destructive", title: "Save Failed", description: "Try again" });
-  }
-};
+  const onSubmit = async (data: { scoringSettings: any }) => {
+    if (!leagueId || !firestore) return;
+
+    try {
+      await updateDoc(doc(firestore, 'leagues', leagueId), {
+        scoringSettings: data.scoringSettings,
+      });
+
+      // Update local context
+      setLeagues(prev => prev.map(l => 
+        l.id === leagueId ? { ...l, scoringSettings: data.scoringSettings } : l
+      ));
+
+      toast({ title: "Success", description: "Scoring settings saved!" });
+      router.back();
+    } catch (err) {
+      console.error(err);
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: "Failed to save scoring settings" 
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -61,13 +99,13 @@ const onSubmit = async (data: { scoringSettings: typeof league.scoringSettings }
 
       <div className="space-y-8">
         {categories.map((category) => {
-          const rules = watch(`scoringSettings.${category}`);
+          const rules = watch(`scoringSettings.${category}`) || [];
 
           return (
             <div key={category} className="rounded-lg border bg-card p-6">
               <h2 className="text-2xl font-bold mb-6">{category}</h2>
               <div className="space-y-4">
-                {rules.map((rule, index) => (
+                {rules.map((rule: any, index: number) => (
                   <div key={rule.abbr} className="grid grid-cols-3 items-center gap-4 py-3 border-b last:border-0">
                     <div className="font-medium">{rule.name} ({rule.abbr})</div>
                     <div className="flex items-center gap-3">
@@ -81,9 +119,12 @@ const onSubmit = async (data: { scoringSettings: typeof league.scoringSettings }
                     </div>
                     <div className="flex items-center gap-3">
                       <Switch
+                        checked={watch(`scoringSettings.${category}.${index}.enabled`)}
                         {...control.register(`scoringSettings.${category}.${index}.enabled`)}
                       />
-                      <span className="text-sm">{rule.enabled ? 'Enabled' : 'Disabled'}</span>
+                      <span className="text-sm">
+                        {watch(`scoringSettings.${category}.${index}.enabled`) ? 'Enabled' : 'Disabled'}
+                      </span>
                     </div>
                   </div>
                 ))}

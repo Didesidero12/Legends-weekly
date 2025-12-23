@@ -1,60 +1,109 @@
 // src/components/dev/SleeperTestButton.tsx
 'use client';
 
-import { useState } from 'react';
-import { fetchAllPlayers, fetchNFLState } from '@/lib/sleeper-api';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { fetchWeeklyPlayerStats } from '@/lib/sleeper-api';
 
 export default function SleeperTestButton() {
-  const [result, setResult] = useState<string>('');
+  const [stats, setStats] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [currentYear, setCurrentYear] = useState<number>(2025);  // Default to current season
+  const [currentWeek, setCurrentWeek] = useState<number>(12);    // Default to a completed week
 
   const testFetch = async () => {
+    setStats(null);
+    setError(null);
     try {
-      setResult('Fetching NFL state...\n');
-      const state = await fetchNFLState();
-      const nflWeekInfo = `NFL State: Season ${state.season}, Leg Week ${state.leg}, Week ${state.week}, Display Week ${state.display_week}`;
+      console.log(`Fetching stats for year ${currentYear}, week ${currentWeek}...`);
+      const data = await fetchWeeklyPlayerStats(currentYear, currentWeek);
+      console.log('Full response keys count:', Object.keys(data).length);
 
-      setResult(prev => prev + nflWeekInfo + '\n\nFetching all players...\n');
-
-      const players = await fetchAllPlayers();
-      const count = Object.keys(players).length;
-      const sampleId = Object.keys(players)[0];
-      const samplePlayer = players[sampleId];
-
-      const sampleInfo = `Success! Loaded ${count} players.\n` +
-        `Sample Player ID: ${sampleId}\n` +
-        `Sample: ${samplePlayer.full_name || 'N/A'} | ${samplePlayer.position || 'N/A'} | ${samplePlayer.team || 'N/A'}`;
-
-      // Find Patrick Mahomes (common test player)
-      const mahomesEntry = Object.entries(players).find(
-        ([_, p]: [string, any]) => p.full_name === 'Patrick Mahomes'
-      );
-      const mahomesId = mahomesEntry ? mahomesEntry[0] : 'Not found';
-
-      setResult(prev => 
-        prev + sampleInfo + `\n\nPatrick Mahomes Sleeper ID: ${mahomesId}`
-      );
-    } catch (err: any) {
-      setResult(`Error: ${err.message}\nCheck console for details.`);
-      console.error(err);
+      const mahomesId = '4046';
+      const mahomesStats = data[mahomesId];
+      if (mahomesStats) {
+        console.log(`Mahomes ${currentYear} Week ${currentWeek} stats found:`, mahomesStats);
+        setStats(mahomesStats);
+      } else {
+        setError(`No stats found for Mahomes in ${currentYear} Week ${currentWeek}`);
+      }
+    } catch (err) {
+      const errorMsg = (err as Error).message;
+      console.error('Fetch error:', err);
+      setError(`Error: ${errorMsg}`);
     }
   };
 
   return (
-    <div className="p-6 bg-orange-50 border border-orange-200 rounded-lg">
-      <p className="font-bold text-orange-900 mb-4">DEV TOOL: Sleeper API Connection Test</p>
-      <Button 
-        onClick={testFetch}
-        variant="default"
-        className="mb-4 bg-orange-600 hover:bg-orange-700"
-      >
-        Run Sleeper API Test
-      </Button>
-      
-      {result && (
-        <pre className="mt-4 text-sm bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-96 whitespace-pre-wrap">
-          {result}
-        </pre>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="text-sm font-medium">Year</label>
+          <input
+            type="number"
+            value={currentYear}
+            onChange={(e) => setCurrentYear(Number(e.target.value))}
+            className="ml-2 px-3 py-1 rounded border bg-background"
+            min="2020"
+            max="2025"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Week</label>
+          <input
+            type="number"
+            value={currentWeek}
+            onChange={(e) => setCurrentWeek(Number(e.target.value))}
+            className="ml-2 px-3 py-1 rounded border bg-background"
+            min="1"
+            max="18"
+          />
+        </div>
+        <Button onClick={testFetch}>
+          Test Sleeper Stats Fetch (Mahomes {currentYear} Week {currentWeek})
+        </Button>
+      </div>
+
+      {error && (
+        <p className="text-red-500 font-medium">{error}</p>
+      )}
+
+      {stats && (
+        <div className="mt-6">
+          <p className="font-bold text-green-500 text-lg mb-3">
+            ✅ Success! Mahomes {currentYear} Week {currentWeek} Stats
+          </p>
+
+          {/* Quick summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-800 p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Passing Yards</p>
+              <p className="text-2xl font-bold text-white">{stats.pass_yd ?? 'N/A'}</p>
+            </div>
+            <div className="bg-gray-800 p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Passing TDs</p>
+              <p className="text-2xl font-bold text-white">{stats.pass_td ?? 0}</p>
+            </div>
+            <div className="bg-gray-800 p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">INTs</p>
+              <p className="text-2xl font-bold text-red-400">{stats.pass_int ?? 0}</p>
+            </div>
+            <div className="bg-gray-800 p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Rush Yards</p>
+              <p className="text-2xl font-bold text-white">{stats.rush_yd ?? 0}</p>
+            </div>
+          </div>
+
+          {/* Full JSON - collapsible */}
+          <details className="bg-gray-900 rounded-lg border border-gray-700">
+            <summary className="cursor-pointer p-4 font-medium text-gray-300 hover:text-white">
+              View Full Raw Stats JSON ({Object.keys(stats).length} fields)
+            </summary>
+            <pre className="p-4 text-green-400 text-sm overflow-auto max-h-96">
+              {JSON.stringify(stats, null, 2)}
+            </pre>
+          </details>
+        </div>
       )}
     </div>
   );

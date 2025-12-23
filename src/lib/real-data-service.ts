@@ -39,49 +39,31 @@ export async function getPlayerGameLog(player: Player, league: League, year: num
 
   for (let week = 1; week <= currentWeek; week++) {
     const stats = await fetchWeeklyPlayerStats(year, week);
-    const playerStats = stats[player.sleeperId];
+    console.log(`Week ${week}: Stats keys count:`, Object.keys(stats).length);
+    console.log(`Week ${week}: Sample keys:`, Object.keys(stats).slice(0, 10));
+    console.log(`Week ${week}: API response status:`, response.status);
+    console.log(`Week ${week}: API data type:`, typeof data);
 
-    if (playerStats) {
-      const entry: GameLogEntry = {
-        week,
-        opponent: 'TBD', 
-        fpts: 0,
-        passingAttempts: playerStats.pass_att,
-        completions: playerStats.pass_cmp,
-        incompletePasses: playerStats.pass_att - playerStats.pass_cmp,
-        passingYards: playerStats.pass_yd,
-        passingTds: playerStats.pass_td,
-        interceptions: playerStats.pass_int,
-        sacksTaken: playerStats.pass_sack,
-        passing2pt: playerStats.pass_2pt,
+    let playerStats = stats[player.sleeperId] || stats[player.sleeperId.toString()];
 
-        rushingAttempts: playerStats.rush_att,
-        rushingYards: playerStats.rush_yd,
-        rushingTds: playerStats.rush_td,
-        rushing2pt: playerStats.rush_2pt,
-
-        targets: playerStats.rec_tgt,
-        receptions: playerStats.rec,
-        receivingYards: playerStats.rec_yd,
-        receivingTds: playerStats.rec_td,
-        receiving2pt: playerStats.rec_2pt,
-
-        fumbles: playerStats.fum,
-        fumblesLost: playerStats.fum_lost,
-        fumbleRecoveries: playerStats.fum_rec,
-
-        // Kicking, Defense, etc. as needed
-      };
-
-      entry.fpts = calculateFantasyPoints(player, entry, league.scoringSettings);
-      gameLog.push(entry);
-    } else {
-      gameLog.push({
-        week,
-        opponent: 'BYE or DNP',
-        fpts: 0,
-      } as GameLogEntry);
+    if (!playerStats) {
+      // Fallback to nested lookup (sometimes player_id inside stat object)
+      playerStats = Object.values(stats).find((s: any) => s.player_id === player.sleeperId || s.player_id === player.sleeperId.toString());
     }
+
+    console.log(`Week ${week}: playerStats for ${player.sleeperId}:`, playerStats ? 'FOUND' : 'NOT FOUND');
+
+    const entry: GameLogEntry = {
+      week,
+      opponent: playerStats?.opp || 'BYE',
+      gameResult: undefined,
+      teamScore: undefined,
+      opponentScore: undefined,
+      fpts: playerStats ? calculateFantasyPoints(player, mapSleeperStatsToGameLog(playerStats), league.scoringSettings) : undefined,
+      ...mapSleeperStatsToGameLog(playerStats || {}),
+    };
+
+    gameLog.push(entry);
   }
 
   return gameLog.reverse();

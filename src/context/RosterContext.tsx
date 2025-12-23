@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
-
+import { mapSleeperStatsToGameLog } from '@/lib/stats-mapper';
 import type { Player, Roster, League, Team, PositionSetting, ScoringSettings, ScoringSetting } from '@/lib/types';
 import { useFirestore, useUser } from '@/firebase/provider';
+
 
 import { 
   collection, 
@@ -17,8 +18,6 @@ import {
 import { getCurrentNFLWeek } from '@/lib/nfl-week';
 import { fetchWeeklyPlayerStats, fetchAllPlayers, fetchNFLState } from '@/lib/sleeper-api';
 import { calculateFantasyPoints } from '@/lib/scoring-calculator';
-
-
 
 
 const defaultRosterSettings: PositionSetting[] = [
@@ -344,50 +343,50 @@ useEffect(() => {
 }, [sleeperMasterPlayers, leagues]);
 
   // ←←← REPLACE THE WHOLE loadRealStats useEffect WITH THIS ↓↓↓
-  useEffect(() => {
-    if (leagues.length === 0) return;
+  // useEffect(() => {
+  //   if (leagues.length === 0) return;
 
-    const currentWeek = getCurrentNFLWeek();
-    const currentYear = new Date().getFullYear();
+  //   const currentWeek = getCurrentNFLWeek();
+  //   const currentYear = new Date().getFullYear();
 
-    // Prevent running multiple times for the same week
-    if (lastLoadedWeek === currentWeek && lastLoadedYear === currentYear) {
-      return;
-    }
+  //   // Prevent running multiple times for the same week
+  //   if (lastLoadedWeek === currentWeek && lastLoadedYear === currentYear) {
+  //     return;
+  //   }
 
-    const loadRealStats = async () => {
-      try {
-        console.log(`Fetching Sleeper stats for ${currentYear} Week ${currentWeek}`);
-        const stats = await fetchWeeklyPlayerStats(currentYear, currentWeek);
+  //   const loadRealStats = async () => {
+  //     try {
+  //       console.log(`Fetching Sleeper stats for ${currentYear} Week ${currentWeek}`);
+  //       const stats = await fetchWeeklyPlayerStats(currentYear, currentWeek);
 
-        const updatedLeagues = leagues.map(league => {
-          const updatedTeams = league.teams?.map(team => {
-            const updateRosterArray = (arr: (Player | null)[]) => 
-              arr.map(p => p ? updatePlayerPoints(p, stats, league.scoringSettings) : null);
+  //       const updatedLeagues = leagues.map(league => {
+  //         const updatedTeams = league.teams?.map(team => {
+  //           const updateRosterArray = (arr: (Player | null)[]) => 
+  //             arr.map(p => p ? updatePlayerPoints(p, stats, league.scoringSettings) : null);
 
-            const updatedRoster = {
-              starters: updateRosterArray(team.roster.starters),
-              bench: updateRosterArray(team.roster.bench),
-              ir: updateRosterArray(team.roster.ir),
-            };
+  //           const updatedRoster = {
+  //             starters: updateRosterArray(team.roster.starters),
+  //             bench: updateRosterArray(team.roster.bench),
+  //             ir: updateRosterArray(team.roster.ir),
+  //           };
 
-            return { ...team, roster: updatedRoster };
-          }) || [];
+  //           return { ...team, roster: updatedRoster };
+  //         }) || [];
 
-          return { ...league, teams: updatedTeams };
-        });
+  //         return { ...league, teams: updatedTeams };
+  //       });
 
-        setLeagues(updatedLeagues);
-        setLastLoadedWeek(currentWeek);
-        setLastLoadedYear(currentYear);
-        console.log("Real stats loaded and points calculated");
-      } catch (err) {
-        console.error("Failed to load real stats:", err);
-      }
-    };
+  //       setLeagues(updatedLeagues);
+  //       setLastLoadedWeek(currentWeek);
+  //       setLastLoadedYear(currentYear);
+  //       console.log("Real stats loaded and points calculated");
+  //     } catch (err) {
+  //       console.error("Failed to load real stats:", err);
+  //     }
+  //   };
 
-    loadRealStats();
-  }, [leagues]); // Keep [leagues]—the guard above prevents the loop
+  //   loadRealStats();
+  // }, [leagues]); // Keep [leagues]—the guard above prevents the loop
 
 const updatePlayerPoints = (player: Player, stats: any, scoringSettings: ScoringSettings) => {
   const playerStats = stats[player.sleeperId || player.id]; // Use sleeperId if you have it
@@ -601,8 +600,101 @@ const available = realPlayers.filter(p => !rosteredSleeperIds.has(p.sleeperId));
   loadRealAvailablePlayers();
 }, [leagues]);
 
+
+// ←←← FIXED BULK STATS LOADER (NO INFINITE LOOP)
+useEffect(() => {
+  if (leagues.length === 0 || availablePlayers.length === 0) return;
+  if (currentNFLWeek === 0 || !currentSeason) return;
+
+  const loadAllPlayerGameLogs = async () => {
+    const year = currentSeason || new Date().getFullYear();
+    const week = currentNFLWeek || getCurrentNFLWeek();
+
+    // Fetch all weeks
+    const allWeeklyStats: Record<number, any> = {};
+
+    for (let w = 1; w <= week; w++) {
+      try {
+        const stats = await fetchWeeklyPlayerStats(year, w);
+        allWeeklyStats[w] = stats;
+      } catch (err) {
+        console.warn(`Failed to fetch week ${w}`, err);
+      }
+    }
+
+    // Build gameLog for every player (rostered + free agent)
+    const gameLogsById: Record<string, GameLogEntry[]> = {};
+
+    // Process all players from availablePlayers + rostered
+    const allPlayersToProcess = [
+      ...availablePlayers,
+      ...leagues.flatMap(l => l.teams?.flatMap(t => 
+        [...t.roster.starters, ...t.roster.bench, ...t.roster.ir].filter((p): p is Player => !!p)
+      ) || [])
+    ];
+
+    allPlayersToProcess.forEach(p => {
+      if (!p.sleeperId) return;
+
+      const gameLog: GameLogEntry[] = [];
+
+      // Find player's league for correct scoring
+      const playerLeague = leagues.find(l => 
+        l.teams?.some(t => 
+          [...t.roster.starters, ...t.roster.bench, ...t.roster.ir].some(pl => pl?.sleeperId === p.sleeperId)
+        )
+      );
+
+      const scoring = playerLeague?.scoringSettings || defaultScoringSettings;
+
+      for (let w = 1; w <= week; w++) {
+        const weeklyStats = allWeeklyStats[w];
+        const playerStats = weeklyStats?.[p.sleeperId];
+
+        const fpts = playerStats 
+          ? calculateFantasyPoints(p, mapSleeperStatsToGameLog(playerStats), scoring) 
+          : undefined;
+
+        gameLog.push({
+          week: w,
+          opponent: playerStats?.opp || 'BYE',
+          fpts,
+          ...mapSleeperStatsToGameLog(playerStats || {}),
+        });
+      }
+
+      gameLogsById[p.sleeperId] = gameLog.reverse();
+    });
+
+    // Update availablePlayers
+    setAvailablePlayers(prev => prev.map(p => ({
+      ...p,
+      gameLog: gameLogsById[p.sleeperId] || []
+    })));
+
+    // Update leagues (rostered players)
+    setLeagues(prevLeagues => prevLeagues.map(league => ({
+      ...league,
+      teams: league.teams?.map(team => ({
+        ...team,
+        roster: {
+          starters: team.roster.starters.map((p: Player | null) => 
+            p ? { ...p, gameLog: gameLogsById[p.sleeperId] || [] } : null
+          ),
+          bench: team.roster.bench.map(p => ({ ...p, gameLog: gameLogsById[p.sleeperId] || [] })),
+          ir: team.roster.ir.map(p => ({ ...p, gameLog: gameLogsById[p.sleeperId] || [] })),
+        }
+      })) || []
+    })));
+
+    console.log('Bulk game log load complete — all players have stats');
+  };
+
+  loadAllPlayerGameLogs();
+}, [leagues.length, availablePlayers.length, currentSeason, currentNFLWeek]);
+
 const updateTeamRoster = async (leagueId: string, teamId: string, newRoster: Roster) => {
-  // Update local context using functional update
+  // Update local state
   setLeagues((prevLeagues) => {
     const updatedLeagues = prevLeagues.map((league) => {
       if (league.id === leagueId) {
@@ -623,11 +715,15 @@ const updateTeamRoster = async (leagueId: string, teamId: string, newRoster: Ros
   // Save to Firestore
   if (db) {
     try {
+      // Clean undefined values — Firestore hates them
+      const cleanRoster = JSON.parse(JSON.stringify(newRoster)); // Strips undefined
+
       const teamRef = doc(db, 'leagues', leagueId, 'teams', teamId);
-      await updateDoc(teamRef, { roster: newRoster });
+      await updateDoc(teamRef, { roster: cleanRoster });
       console.log("Roster saved to Firestore");
     } catch (err) {
       console.error("Failed to save roster to Firestore", err);
+      toast({ variant: "destructive", title: "Save failed" });
     }
   }
 };

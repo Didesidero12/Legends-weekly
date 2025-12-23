@@ -73,19 +73,39 @@ function PlayerRow({
   onPlayerClick,
   userCards = [],
   opponentCards = [],
-  slotIndex 
+  slotIndex,
+  selectedWeek = 16  // ← Add this with default
 }: { 
-  userPlayer: Player | null;           // ← Change from RosterSlot or Player to Player | null
-  opponentPlayer: Player | null;       // ← Same
+  userPlayer: Player | null;
+  opponentPlayer: Player | null;
   position: string; 
-  onPlayerClick: (player: Player | null) => void; // ← Allow null
+  onPlayerClick: (player: Player | null) => void;
   userCards: LegendaryCard[];
   opponentCards: LegendaryCard[];
   slotIndex: number;
+  selectedWeek?: number;  // ← Add this
 }) {
   const [userScore, setUserScore] = useState(userPlayer?.actualPoints ?? 0);
   const [opponentScore, setOpponentScore] = useState(opponentPlayer?.actualPoints ?? 0);
   const isMobile = useIsMobile();
+
+  // Find active played card for user player
+const userActiveCard = userCards?.find(c => 
+  c.status === 'played' && 
+  c.pendingSlotId === `${position}-${slotIndex}`
+);
+
+// Find active played card for opponent player
+const opponentActiveCard = opponentCards?.find(c => 
+  c.status === 'played' && 
+  c.pendingSlotId === `${position}-${slotIndex}`
+);
+
+  const getPlayerWeekScore = (player: Player | null) => {
+    if (!player || !player.gameLog) return 0;
+    const weekLog = player.gameLog.find(g => g.week === selectedWeek);
+    return weekLog?.fpts || 0;
+  };
 
   const userDisplayName = userPlayer ? userPlayer.name : 'Empty Slot';
 const opponentDisplayName = opponentPlayer ? opponentPlayer.name : 'Empty Slot';
@@ -156,11 +176,9 @@ const opponentDisplayName = opponentPlayer ? opponentPlayer.name : 'Empty Slot';
               {renderPlayer(userPlayer, userCards, false)}
             </div>
             <div className="flex-shrink-0 text-right">
-              <div className="font-semibold text-sm">
-                {userPlayer 
-                  ? getSlotPoints(userPlayer, slotIndex, userCards, position).toFixed(2)
-                  : '--'}
-              </div>
+            <div className="font-bold text-lg text-primary">
+              {(userActiveCard?.historicalPoints ?? getPlayerWeekScore(userPlayer)).toFixed(2)}
+            </div>
               <div className="text-muted-foreground text-xs">
                 {userPlayer?.projectedPoints?.toFixed(2) ?? '--'}
               </div>
@@ -187,9 +205,9 @@ const opponentDisplayName = opponentPlayer ? opponentPlayer.name : 'Empty Slot';
         {renderPlayer(userPlayer, userCards, false)}
       </TableCell>
       <TableCell className="text-center">
-        <div className="font-bold text-lg text-primary">
-          {getSlotPoints(userPlayer, slotIndex, userCards, position).toFixed(2)}
-        </div>
+      <div className="font-bold text-lg text-primary">
+        {(userActiveCard?.historicalPoints ?? getPlayerWeekScore(userPlayer)).toFixed(2)}
+      </div>
         <div className="text-xs text-muted-foreground">
           {userPlayer?.projectedPoints?.toFixed(2) ?? '--'}
         </div>
@@ -198,9 +216,9 @@ const opponentDisplayName = opponentPlayer ? opponentPlayer.name : 'Empty Slot';
       <TableCell className="text-center font-semibold text-muted-foreground w-[50px]">{position}</TableCell>
       
       <TableCell className="text-center">
-        <div className="font-bold text-lg text-primary">
-          {getSlotPoints(opponentPlayer, slotIndex, opponentCards, position).toFixed(2)}
-        </div>
+      <div className="font-bold text-lg text-primary">
+        {(opponentActiveCard?.historicalPoints ?? getPlayerWeekScore(opponentPlayer)).toFixed(2)}
+      </div>
         <div className="text-xs text-muted-foreground">
           {opponentPlayer?.projectedPoints?.toFixed(2) ?? '--'}
         </div>
@@ -219,16 +237,18 @@ function MatchupComparison({
   benchSize, 
   irSize, 
   onPlayerClick,
-  userCards = [],           // ← Default value HERE (in destructuring)
-  opponentCards = []        // ← Default value HERE
+  userCards = [],           
+  opponentCards = [],
+  selectedWeek = 16  // ← Add this
 }: { 
   matchup: Matchup;
   starterSlots: string[];
   benchSize: number;
   irSize: number;
   onPlayerClick: (player: Player) => void;
-  userCards: LegendaryCard[];       // ← Type only (no = here!)
+  userCards: LegendaryCard[];       
   opponentCards: LegendaryCard[];
+  selectedWeek?: number;  // ← Add this
 }) {
   const { userTeam, opponentTeam } = matchup;
   
@@ -236,17 +256,41 @@ function MatchupComparison({
   const opponentRoster = opponentTeam ? (opponentTeam.roster ?? EMPTY_ROSTER) : EMPTY_ROSTER;
 
     // Calculate total scores with legendary card overrides
-    const totalUserScore = useMemo(() => {
-      return userRoster.starters.reduce((sum, player, index) => 
-        sum + getSlotPoints(player, index, userCards, starterSlots[index]), 0
-      );
-    }, [userRoster.starters, starterSlots, userCards]);
+const totalUserScore = useMemo(() => {
+  let total = 0;
+  userRoster.starters.forEach((player, index) => {
+    if (!player) return;
 
-    const totalOpponentScore = useMemo(() => {
-      return opponentRoster.starters.reduce((sum, player, index) => 
-        sum + getSlotPoints(player, index, opponentCards, starterSlots[index]), 0
-      );
-    }, [opponentRoster.starters, starterSlots, opponentCards]);
+    const slotId = `${starterSlots[index]}-${index}`;
+    const activeCard = userCards.find(c => c.status === 'played' && c.pendingSlotId === slotId);
+
+    if (activeCard?.historicalPoints !== undefined) {
+      total += activeCard.historicalPoints;
+    } else if (player.gameLog) {
+      const weekLog = player.gameLog.find(g => g.week === selectedWeek);
+      total += weekLog?.fpts || 0;
+    }
+  });
+  return total;
+}, [userRoster.starters, userCards, starterSlots, selectedWeek]);
+
+const totalOpponentScore = useMemo(() => {
+  let total = 0;
+  opponentRoster.starters.forEach((player, index) => {
+    if (!player) return;
+
+    const slotId = `${starterSlots[index]}-${index}`;
+    const activeCard = opponentCards.find(c => c.status === 'played' && c.pendingSlotId === slotId);
+
+    if (activeCard?.historicalPoints !== undefined) {
+      total += activeCard.historicalPoints;
+    } else if (player.gameLog) {
+      const weekLog = player.gameLog.find(g => g.week === selectedWeek);
+      total += weekLog?.fpts || 0;
+    }
+  });
+  return total;
+}, [opponentRoster.starters, opponentCards, starterSlots, selectedWeek]);
 
   // Keep your existing useState for live demo updates
   const [displayedUserScore, setDisplayedUserScore] = useState(totalUserScore);
@@ -333,6 +377,7 @@ useEffect(() => {
                     userCards={userCards}
                     opponentCards={opponentCards}
                     slotIndex={index}
+                    selectedWeek={selectedWeek}  // ← Add this
                   />
                 ))}
                 </TableBody>
@@ -412,6 +457,7 @@ export default function MatchupPage() {
   const [isScoresSheetOpen, setScoresSheetOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
+  const [selectedWeek, setSelectedWeek] = useState(16); // Current week
 
 
 const [weeklyMatchups, setWeeklyMatchups] = useState<(Matchup & { id: string })[]>([]);
@@ -532,6 +578,7 @@ useEffect(() => {
             matchups={weeklyMatchups} 
             selectedMatchup={selectedMatchup}
             onSelectMatchup={setSelectedMatchup}
+            selectedWeek={selectedWeek}  // ← Add this
           />
           </div>
       </div>

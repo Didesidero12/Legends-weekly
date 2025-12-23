@@ -13,6 +13,7 @@ import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase/provider';
 import { useToast } from '@/hooks/use-toast';
 import type { CardTier, LegendaryCard } from '@/lib/types';
+import { Crown } from 'lucide-react';
 
 const mechanics = [
   { value: 'pure-skill', label: '1. Pure Skill', description: 'Top 50% of scoreboard get 1 pack' },
@@ -83,6 +84,55 @@ const handleSave = async () => {
     setLeagues(updatedLeagues);
   };
 
+// Legendary Card Presets for Demo
+const legends = [
+  { name: 'Johnny Unitas', position: 'QB', tier: 'Legendary' as CardTier, year: 1964, points: 48.0 },
+  { name: 'Walter Payton', position: 'RB', tier: 'Legendary' as CardTier, year: 1977, points: 52.5 },
+  { name: 'Randy Moss', position: 'WR', tier: 'Legendary' as CardTier, year: 2007, points: 46.4 },
+  { name: 'Tony Gonzalez', position: 'TE', tier: 'Legendary' as CardTier, year: 2004, points: 37.8 },
+  // Add more for Epic/Rare/Common later
+];
+
+const handleQuickAddLegend = async (legend: typeof legends[0]) => {
+  if (!leagueId || !user?.uid) {
+    toast({ variant: "destructive", title: "Error", description: "User not logged in" });
+    return;
+  }
+
+  // Find user's team inside function (safe)
+  const currentUserTeam = league?.teams?.find(t => t.managerId === user.uid);
+  if (!currentUserTeam) {
+    toast({ variant: "destructive", title: "Error", description: "Your team not found" });
+    return;
+  }
+
+  const newCardId = `legend-${legend.name.toLowerCase().replace(' ', '-')}-${Date.now()}`;
+
+  const newCard: LegendaryCard = {
+    id: newCardId,
+    playerName: legend.name,
+    position: legend.position,
+    tier: legend.tier,
+    historicalYear: legend.year,
+    historicalPoints: legend.points,
+    status: 'unplayed',
+    pendingSlotId: null,
+  };
+
+  const cardRef = doc(firestore, 'leagues', leagueId, 'teams', currentUserTeam.id, 'cards', newCardId);
+
+  try {
+    await setDoc(cardRef, newCard);
+    toast({
+      title: "Legend Added!",
+      description: `${legend.name} added to your hand!`,
+    });
+  } catch (err) {
+    console.error(err);
+    toast({ variant: "destructive", title: "Failed" });
+  }
+};
+
 const handleManualAddCard = async () => {
   if (!leagueId) {
     toast({
@@ -112,7 +162,7 @@ const handleManualAddCard = async () => {
     historicalYear: 0,
     historicalPoints: 0,
     status: 'unplayed',
-    pendingSlotId: undefined,
+    pendingSlotId: null,  // ← CHANGE undefined TO null
   };
 
   const teamRef = doc(firestore, 'leagues', leagueId, 'teams', manualTeamId, 'cards', newCard.id);
@@ -323,7 +373,7 @@ const getRandomPosition = (): string => {
       </SelectContent>
     </Select>
 
-    <Select value={manualTeamId} onValueChange={setManualTeamId}>
+<Select value={manualTeamId} onValueChange={setManualTeamId}>
       <SelectTrigger className="w-64">
         <SelectValue placeholder="Select team" />
       </SelectTrigger>
@@ -340,6 +390,35 @@ const getRandomPosition = (): string => {
   </div>
 </div>
 
+{/* ←←← QUICK ADD LEGENDS SECTION — ADD THIS HERE */}
+<div className="mt-12 pt-8 border-t">
+  <h3 className="text-xl font-bold mb-4">Quick Add NFL Legends (Demo)</h3>
+  <p className="text-sm text-muted-foreground mb-6">
+    Instantly add a legendary card to your hand for testing activation and reveal.
+  </p>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {legends.map((legend) => (
+      <Button
+        key={legend.name}
+        onClick={() => handleQuickAddLegend(legend)}
+        variant="outline"
+        className="h-auto py-4 flex flex-col items-start justify-between border-2 hover:border-yellow-500 transition-all"
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <Crown className="h-6 w-6 text-yellow-500" />
+          <span className="font-bold text-lg">{legend.tier} {legend.position}</span>
+        </div>
+        <div className="text-left">
+          <div className="font-medium text-base">{legend.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {legend.year} • +{legend.points} pts
+          </div>
+        </div>
+      </Button>
+    ))}
+  </div>
+</div>
+
 <div className="mt-12 pt-8 border-t">
   <Label>Weekly Card Distribution (Testing Tool)</Label>
   <p className="text-sm text-muted-foreground mb-4">
@@ -349,6 +428,8 @@ const getRandomPosition = (): string => {
     Run Weekly Distribution
   </Button>
 </div>
+
+
 
       <div className="mt-8 flex justify-between">
         <Button variant="outline" onClick={() => router.back()}>Cancel</Button>

@@ -44,3 +44,14 @@ export async function fetchNFLState() {
   }
   return await response.json();
 }
+
+export async function fetchNFLPlayerStats(playerId: string, season: number) {
+  // playerId is NFL GSIS ID — we can map Sleeper ID to GSIS ID from Sleeper master
+  // But for now, hardcode Mahomes GSIS ID for test: "00-0033873"
+  const gsisId = "00-0033873"; // Mahomes — replace with dynamic later
+
+  const response = await fetch(`https://api.nfl.com/v3/players/${gsisId}/stats?season=${season}`);
+  if (!response.ok) throw new Error('NFL stats fetch failed');
+  const data = await response.json();
+  return data; // Full season stats + weekly breakdown
+}

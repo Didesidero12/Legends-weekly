@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useMemo, useContext } from 'react';
+import { useState, useMemo, useContext, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +93,7 @@ export default function PlayersPage() {
   const params = useParams();
   const leagueId = params.leagueId as string;
   
+  
 const currentLeague = useMemo(() => leagues.find(l => l.id === leagueId), [leagues, leagueId]);
 const userTeam = useMemo(() => currentLeague?.teams?.find(t => t.managerId === user?.uid), [currentLeague, user]);
 const roster = useMemo(() => userTeam?.roster, [userTeam]); // ← This line was missing
@@ -114,10 +115,17 @@ const teamRoster = useMemo(() => {
 
   const { toast } = useToast();
 
-  const filteredPlayers = useMemo(() => 
-    (availablePlayers || []).filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !teamRoster.some(rosterPlayer => rosterPlayer.id === p.id)
-    ), [searchQuery, teamRoster, availablePlayers]);
+const filteredPlayers = useMemo(() => 
+  (availablePlayers || []).filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !teamRoster.some(rosterPlayer => rosterPlayer.id === p.id)
+  ), [searchQuery, teamRoster, availablePlayers]);
+
+useEffect(() => {
+  if (availablePlayers.length > 0) {
+    console.log('Available players updated - first player gameLog length:', availablePlayers[0]?.gameLog?.length || 0);
+    console.log('Sample gameLog entry:', availablePlayers[0]?.gameLog?.[0]);
+  }
+}, [availablePlayers]);
 
 const handleAddPlayer = async (player: Player) => {  // ← ADD async HERE
   if (!roster || !userTeam || !player) return;
@@ -300,10 +308,13 @@ updateTeamRoster(leagueId, userTeam.id, { ...roster, starters: newStarters, benc
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead className="text-right">Proj</TableHead>
-                    <TableHead className="text-right">Score</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    {[
+                      <TableHead key="player">Player</TableHead>,
+                      <TableHead key="proj" className="text-right">Proj</TableHead>,
+                      <TableHead key="score" className="text-right">Score</TableHead>,
+                      <TableHead key="fpts" className="text-right">Total FPTS</TableHead>,
+                      <TableHead key="action" className="text-right">Action</TableHead>,
+                    ]}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -321,24 +332,24 @@ updateTeamRoster(leagueId, userTeam.id, { ...roster, starters: newStarters, benc
                               e.currentTarget.src = 'https://picsum.photos/seed/fallback/64/64';
                             }}
                           />
-<div>
-  <div className="flex items-center gap-2">
-    <button onClick={() => setSelectedPlayer(p)} className="font-medium hover:underline">{p.name}</button>
-    <TeamHelmet team={p.nflTeam} className="w-4 h-4" />
-    <span className="text-xs text-muted-foreground">{p.position}</span>
-    <PlayerStatus status={p.status} />
-  </div>
-  <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
-    <span>{p.rosterPercentage ?? 0}% Rost</span>
-    <span>{p.startPercentage ?? 0}% Start</span>
-  </div>
-  <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
-    <span>{p.gameTime ?? '--'}</span>
-    <span className={getRankColor(p.opponent?.rank ?? 32)}>
-      {p.opponent?.team ?? 'BYE'} ({p.opponent?.rank ?? '--'})
-    </span>
-  </div>
-</div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setSelectedPlayer(p)} className="font-medium hover:underline">{p.name}</button>
+                            <TeamHelmet team={p.nflTeam} className="w-4 h-4" />
+                            <span className="text-xs text-muted-foreground">{p.position}</span>
+                            <PlayerStatus status={p.status} />
+                          </div>
+                          <div className="flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5">
+                            <span>{p.rosterPercentage ?? 0}% Rost</span>
+                            <span>{p.startPercentage ?? 0}% Start</span>
+                          </div>
+                          <div className={cn("flex items-center gap-x-2 whitespace-nowrap text-[11px] text-muted-foreground -mt-0.5")}>
+                            <span>{p.gameTime ?? '--'}</span>
+                            <span className={getRankColor(p.opponent?.rank ?? 32)}>
+                              {p.opponent?.team ?? 'BYE'} ({p.opponent?.rank ?? '--'})
+                            </span>
+                          </div>
+                        </div>
                       </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -349,9 +360,9 @@ updateTeamRoster(leagueId, userTeam.id, { ...roster, starters: newStarters, benc
                       </TableCell>
                       <TableCell className="text-right">
                         {freeAgentMode || isUnlocked ? (
-<Button size="sm" variant="outline" onClick={() => handleAddPlayer(p)}>
-  {freeAgentMode ? 'Add' : 'Claim'}
-</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleAddPlayer(p)}>
+                      {freeAgentMode ? 'Add' : 'Claim'}
+                    </Button>
                         ) : (
                           <TooltipProvider>
                             <Tooltip>

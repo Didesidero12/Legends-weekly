@@ -138,7 +138,8 @@ function RosterTable({
   onFillSlot,
   onDropPlayer,
   onPlayerClick,
-  cards = []
+  cards = [],
+  selectedWeek = 16  // ← Add this prop with default
 }: { 
   title: string, 
   players: RosterSlot[], 
@@ -149,9 +150,18 @@ function RosterTable({
   onDropPlayer: (player: Player) => void;
   onPlayerClick: (player: Player) => void;
   cards?: LegendaryCard[];
+  selectedWeek?: number;  // ← Add this
 }) {
   const params = useParams();
   const leagueId = params.leagueId as string;
+
+  // ← Add this function INSIDE RosterTable
+  const playerWeekScore = (player: Player | null): number => {
+    if (!player || !player.gameLog) return 0;
+    const weekLog = player.gameLog.find(g => g.week === selectedWeek);
+    return weekLog?.fpts || 0;
+  };
+
 
   return (
     <Card>
@@ -251,14 +261,9 @@ function RosterTable({
                         </TableCell>
                       <TableCell className="text-right">
                         <div>
-                          <div className="font-medium">
-                          {getSlotPoints(
-                            player, 
-                            index, 
-                            cards, 
-                            starterSlots?.[index] || 'UNKNOWN'
-                          ).toFixed(2)}
-                          </div>
+                        <div className="font-bold text-lg text-primary">
+                          {(activeCard?.historicalPoints ?? playerWeekScore(player)).toFixed(2)}
+                        </div>
                           <div className="text-xs text-muted-foreground">
                             Proj: {player?.projectedPoints?.toFixed(2) ?? '--'}
                           </div>
@@ -340,29 +345,29 @@ function RosterTable({
                                     player={player} 
                                     onClick={() => onPlayerClick(player)} 
                                     overrideName={activeCard?.playerName}
-secondaryInfo={
-  <>
-    <div className="flex items-center gap-1.5">
-      <PlayerStatus status={player.status} />
-      {activeTierStyles && (
-        <Badge variant="secondary" className={cn("text-xs", activeTierStyles.badge, activeTierStyles.text)}>
-          <Crown className={cn("w-3 h-3 mr-1.5", activeTierStyles.crown)} />
-          {pendingCard ? `${pendingCard.tier} Pending` : `${activeCard?.tier} Active`}
-        </Badge>
-      )}
-    </div>
-    <div className="flex items-center gap-x-2 text-[10px] text-muted-foreground">
-      <span>{player.rosterPercentage ?? 0}% Rost</span>
-      <span>{player.startPercentage ?? 0}% Start</span>
-    </div>
-    <div className={cn("flex items-center gap-x-1.5 text-[10px] text-muted-foreground")}>
-      <span>{player.gameTime ?? '--'}</span>
-      <span className={cn(getRankColor(player.opponent?.rank ?? 0))}>
-        {player.opponent?.team ?? '--'} ({player.opponent?.rank ?? '-'})
-      </span>
-    </div>
-  </>
-}
+                                    secondaryInfo={
+                                      <>
+                                        <div className="flex items-center gap-1.5">
+                                          <PlayerStatus status={player.status} />
+                                          {activeTierStyles && (
+                                            <Badge variant="secondary" className={cn("text-xs", activeTierStyles.badge, activeTierStyles.text)}>
+                                              <Crown className={cn("w-3 h-3 mr-1.5", activeTierStyles.crown)} />
+                                              {pendingCard ? `${pendingCard.tier} Pending` : `${activeCard?.tier} Active`}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-x-2 text-[10px] text-muted-foreground">
+                                          <span>{player.rosterPercentage ?? 0}% Rost</span>
+                                          <span>{player.startPercentage ?? 0}% Start</span>
+                                        </div>
+                                        <div className={cn("flex items-center gap-x-1.5 text-[10px] text-muted-foreground")}>
+                                          <span>{player.gameTime ?? '--'}</span>
+                                          <span className={cn(getRankColor(player.opponent?.rank ?? 0))}>
+                                            {player.opponent?.team ?? '--'} ({player.opponent?.rank ?? '-'})
+                                          </span>
+                                        </div>
+                                      </>
+                                    }
                                 />
                             ) : (
                                 <div className="flex-1 flex justify-start">
@@ -382,13 +387,8 @@ secondaryInfo={
                         </div>
                       {player && (
                         <div className="text-right w-16 flex-shrink-0">
-                        <div className="font-semibold text-sm">
-                          {getSlotPoints(
-                            player, 
-                            index, 
-                            cards, 
-                            starterSlots?.[index] || 'UNKNOWN'
-                          ).toFixed(2)}
+                        <div className="font-bold text-lg text-primary">
+                          {(activeCard?.historicalPoints ?? playerWeekScore(player)).toFixed(2)}
                         </div>
                           <div className="text-xs text-muted-foreground">
                             Proj: {player.projectedPoints.toFixed(2)}
@@ -420,6 +420,7 @@ export default function TeamPage() {
   const league = useMemo(() => leagues.find(l => l.id === leagueId), [leagues, leagueId]);
   const userTeam = useMemo(() => league?.teams?.find(t => t.managerId === user?.uid), [league, user]);
   const roster = useMemo(() => userTeam?.roster, [userTeam]);
+  
 
   console.log("TeamPage - leagueId from params:", leagueId);
   console.log("TeamPage - current user UID:", user?.uid);
@@ -452,7 +453,7 @@ export default function TeamPage() {
 
   
   const [isTeamInfoSheetOpen, setTeamInfoSheetOpen] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedWeek, setSelectedWeek] = useState(16);
   const totalWeeks = 17;
 
   useEffect(() => {
@@ -564,12 +565,14 @@ const handleConfirmDrop = (droppedPlayerArg?: Player) => {
 
     updateTeamRoster(leagueId, userTeam.id, updatedRoster);
 
-    setAvailablePlayers(prev => {
-      if (prev?.some(p => p.sleeperId === playerBeingDropped.sleeperId)) {
-        return prev;
-      }
-      return [...(prev || []), playerBeingDropped];
-    });
+setAvailablePlayers(prev => {
+  // Use the unique `id` field to check if already in free agency
+  if (prev?.some(p => p.id === playerBeingDropped.id)) {
+    return prev; // Already there — no duplicate
+  }
+  // Add the dropped player to free agency
+  return [...(prev || []), playerBeingDropped];
+});
 
     toast({
       title: "Player Dropped",
@@ -863,18 +866,36 @@ const handleConfirmDrop = (droppedPlayerArg?: Player) => {
   }, [roster]);
 
   // Now calculate totals using displayStarters
-const totalActualPoints = useMemo(() => {
-  return displayStarters.reduce((sum, player, index) => {
-    if (!player) return sum;
-    const position = starterSlots?.[index] || 'FLEX';
-    return sum + getSlotPoints(player, index, cards ?? [], position);  // ← Add ?? []
-  }, 0);
-}, [displayStarters, starterSlots, cards]);
+const CURRENT_WEEK = 16; // Change this to dynamic later if needed
 
-  const totalProjectedPoints = useMemo(() => {
-    if (!roster?.starters) return 0;
-    return roster.starters.reduce((sum, p) => sum + (p?.projectedPoints ?? 0), 0);
-  }, [roster]);
+const totalActualPoints = useMemo(() => {
+  let total = 0;
+
+  displayStarters.forEach((player, index) => {
+    if (!player) return;
+
+    // Find active card for this slot
+    const slotId = `${starterSlots?.[index] || 'FLEX'}-${index}`;
+    const activeCard = cards?.find(c => 
+      c.status === 'played' && 
+      c.pendingSlotId === slotId
+    );
+
+    if (activeCard?.historicalPoints !== undefined) {
+      total += activeCard.historicalPoints;
+    } else if (player.gameLog) {
+      const weekLog = player.gameLog.find(g => g.week === selectedWeek);
+      if (weekLog) total += weekLog.fpts || 0;
+    }
+  });
+
+  return total;
+}, [displayStarters, cards, selectedWeek, starterSlots]);
+
+const totalProjectedPoints = useMemo(() => {
+  if (!roster?.starters) return 0;
+  return roster.starters.reduce((sum, p) => sum + (p?.projectedPoints ?? 0), 0);
+}, [roster]);
 
   const handlePreviousWeek = () => {
     setSelectedWeek(week => Math.max(1, week - 1));
@@ -918,12 +939,11 @@ const totalActualPoints = useMemo(() => {
             <p className="text-sm text-muted-foreground">{userTeam.owner} - {userTeam.record}</p>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold">{totalActualPoints.toFixed(2)}</div>
-          <div className="text-xs text-muted-foreground">
-            Proj: {totalProjectedPoints.toFixed(2)}
-          </div>
-        </div>
+<div className="text-right">
+  <div className="text-2xl font-bold text-primary">{totalActualPoints.toFixed(2)}</div>
+  <div className="text-xs text-muted-foreground">Week {selectedWeek} Score</div>
+  <div className="text-xs text-muted-foreground">Proj: {totalProjectedPoints.toFixed(2)}</div>
+</div>
       </div>
 
         <Card>
@@ -979,17 +999,18 @@ const totalActualPoints = useMemo(() => {
         )}
 
         <div className="space-y-4">
-          <RosterTable 
-            title="Starters" 
-            players={displayStarters} 
-            isStarters={true} 
-            starterSlots={starterSlots} 
-            onMovePlayer={handleMovePlayer} 
-            onFillSlot={handleFillSlot} 
-            onDropPlayer={handleDropPlayer} 
-            onPlayerClick={setSelectedPlayer} 
-            cards={cards ?? []}  // ← Add this safe fallback
-          />
+        <RosterTable 
+          title="Starters" 
+          players={displayStarters} 
+          isStarters={true} 
+          starterSlots={starterSlots} 
+          onMovePlayer={handleMovePlayer} 
+          onFillSlot={handleFillSlot} 
+          onDropPlayer={handleDropPlayer} 
+          onPlayerClick={setSelectedPlayer} 
+          cards={cards ?? []}
+          selectedWeek={selectedWeek}  // ← Add this
+        />
           <RosterTable 
             title="Bench" 
             players={displayBench} 
@@ -998,6 +1019,7 @@ const totalActualPoints = useMemo(() => {
             onDropPlayer={handleDropPlayer} 
             onPlayerClick={setSelectedPlayer} 
             cards={cards ?? []}  // ← Add this
+            selectedWeek={selectedWeek}  // ← Add this
           />
           <RosterTable 
             title="Injured Reserve" 
@@ -1007,6 +1029,7 @@ const totalActualPoints = useMemo(() => {
             onDropPlayer={handleDropPlayer} 
             onPlayerClick={setSelectedPlayer} 
             cards={cards ?? []}  // ← Add this
+            selectedWeek={selectedWeek}  // ← Add this
           />
         </div>
       </div>

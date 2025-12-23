@@ -15,50 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Player, GameLogEntry, League } from '@/lib/types';
-
-function mapSleeperStatsToGameLog(sleeperStats: any): Partial<GameLogEntry> {
-  if (!sleeperStats) return {};
-
-  return {
-    passingAttempts: sleeperStats.pass_att,
-    completions: sleeperStats.pass_cmp,
-    passingYards: sleeperStats.pass_yd,
-    passingTds: sleeperStats.pass_td,
-    interceptions: sleeperStats.pass_int,
-    sacksTaken: sleeperStats.pass_sack,
-
-    rushingAttempts: sleeperStats.rush_att,
-    rushingYards: sleeperStats.rush_yd,
-    rushingTds: sleeperStats.rush_td,
-
-    targets: sleeperStats.rec_tgt,
-    receptions: sleeperStats.rec,
-    receivingYards: sleeperStats.rec_yd,
-    receivingTds: sleeperStats.rec_td,
-
-    fumbles: sleeperStats.fum,
-    fumblesLost: sleeperStats.fum_lost,
-    fumbleRecoveries: sleeperStats.fum_rec,
-
-    // Kicking stats
-    fgm: sleeperStats.fg_made,
-    fga: sleeperStats.fg_att,
-    xpm: sleeperStats.xp_made,
-
-    // Defense stats
-    pointsAgainst: sleeperStats.pts_allow,
-    sacks: sleeperStats.def_sack,
-    defensiveInts: sleeperStats.def_int,
-    defensiveFumbleRecoveries: sleeperStats.def_fum_rec,
-    safeties: sleeperStats.def_safe,
-    defensiveTds: sleeperStats.def_td,
-    returnTds: sleeperStats.ret_td,
-    blockedKicks: sleeperStats.def_blk_kick,
-
-    // Opponent (important for display)
-    opponent: sleeperStats.opp,
-  };
-}
+import { mapSleeperStatsToGameLog } from '@/lib/stats-mapper';
+import { defaultScoringSettings } from '@/lib/mock-data'; // or wherever it's defined
 
 function StatCard({ title, value }: { title: string, value: string | number }) {
     return (
@@ -1187,7 +1145,7 @@ useEffect(() => {
     setIsLoading(true);
 
     try {
-      // Find local player
+      // Find base player (roster or free agent)
       let localPlayer = availablePlayers.find(p => p.id === playerId);
       if (!localPlayer) {
         leagues.forEach(l => {
@@ -1198,7 +1156,7 @@ useEffect(() => {
         });
       }
 
-      if (!localPlayer) {
+      if (!localPlayer || !localPlayer.sleeperId) {
         toast({ variant: "destructive", title: "Player not found" });
         setIsLoading(false);
         return;
@@ -1206,95 +1164,63 @@ useEffect(() => {
 
       const sleeperId = localPlayer.sleeperId;
 
-      if (!sleeperId) {
-        toast({ variant: "destructive", title: "No Sleeper ID for player" });
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch master player info
+      // Fetch master data
       const allPlayers = await fetchAllPlayers();
       const sleeperPlayerData = allPlayers[sleeperId];
-
       if (!sleeperPlayerData) {
         toast({ variant: "destructive", title: "Live player not found" });
         setIsLoading(false);
         return;
       }
 
-      // Get NFL state for current week/year
+      // Get current week/year
       const nflState = await fetchNFLState();
       const currentWeek = nflState.week;
       const year = nflState.season;
 
-      // Fetch current week live stats (for live section)
-      const weeklyStats = await fetchWeeklyPlayerStats(year, currentWeek);
-      const currentWeekStats = weeklyStats[sleeperId];
+      // Build gameLog using getPlayerGameLog (your robust function)
+      const gameLog = await getPlayerGameLog(localPlayer, league, year, currentWeek);
 
-      // Parallel fetch game log for all weeks
-      const gameLogPromises = Array.from({ length: currentWeek }, (_, i) => {
-        const week = i + 1;
-        return fetchWeeklyPlayerStats(year, week)
-          .then(stats => {
-            const playerStats = stats[sleeperId];
-            if (playerStats) {
-              console.log(`Week ${week}: Found stats for ${sleeperId}`, playerStats);
-            } else {
-              console.log(`Week ${week}: No stats for ${sleeperId}`);
-            }
-            return {
-              week,
-              opponent: playerStats?.opp || 'BYE',
-              fpts: playerStats ? calculateFantasyPoints(localPlayer, mapSleeperStatsToGameLog(playerStats), league.scoringSettings) : undefined,
-              ...mapSleeperStatsToGameLog(playerStats || {}),
-            };
-          })
-          .catch(err => {
-            console.warn(`Week ${week} fetch failed:`, err);
-            return { week, opponent: 'BYE', fpts: undefined };
-          });
-      });
+      // Projections
+      let projectedPoints = 0;
+      try {
+        const projections = await fetchWeeklyProjections(year, currentWeek);
+        const playerProj = projections[sleeperId];
+        if (playerProj) {
+          projectedPoints = calculateFantasyPoints(localPlayer, mapSleeperStatsToGameLog(playerProj), league.scoringSettings);
+        }
+      } catch (err) {
+        console.warn('Projections failed', err);
+      }
 
-      const gameLog = (await Promise.all(gameLogPromises)).reverse();
-      console.log('Final gameLog length:', gameLog.length);
-      console.log('Sample gameLog entry:', gameLog[0]);
-
-      // Fetch real projections for current week
-      const projections = await fetchWeeklyProjections(year, currentWeek);
-      const playerProj = projections[sleeperId];
-
-      const projectedPoints = playerProj ? calculateFantasyPoints(localPlayer, mapSleeperStatsToGameLog(playerProj), league.scoringSettings) : 0;
-
-      // Update player with real data
       const updatedPlayer: Player = {
         ...localPlayer,
         name: sleeperPlayerData.full_name,
         position: sleeperPlayerData.position,
         nflTeam: sleeperPlayerData.team || 'FA',
-        headshotUrl: `https://sleepercdn.com/content/nfl/players/thumb/${sleeperId}.jpg` || localPlayer.headshotUrl,
+        headshotUrl: `https://sleepercdn.com/content/nfl/players/thumb/${sleeperId}.jpg`,
         jerseyNumber: sleeperPlayerData.number || localPlayer.jerseyNumber,
         college: sleeperPlayerData.college || localPlayer.college,
         projectedPoints,
-        actualPoints: gameLog[currentWeek - 1]?.fpts || 0, // Current week actual
+        actualPoints: gameLog[0]?.fpts || 0,
         gameLog,
         weeklyProjection: {
           week: currentWeek,
           fpts: projectedPoints,
-          // Add more specific projected stats if needed
         },
       };
 
       setPlayer(updatedPlayer);
     } catch (err) {
-      console.error('Failed to load real player', err);
-      toast({ variant: "destructive", title: "Error loading real stats" });
+      console.error('Failed to load player stats', err);
+      toast({ variant: "destructive", title: "Error loading stats" });
     } finally {
       setIsLoading(false);
     }
   };
 
   loadPlayerAndStats();
-}, [playerId, league, leagues, availablePlayers, toast]);
+}, [playerId, league, leagues, availablePlayers]);
 
 useEffect(() => {
   if (!player?.sleeperId || !league) return;
