@@ -107,6 +107,13 @@ export default {
         'pulse-glow': 'pulse-glow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
+    theme: {
+  extend: {
+    transform: true,  // Enable GPU transforms
+    backfaceVisibility: true,
+    perspective: true,
+  },
+},
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;

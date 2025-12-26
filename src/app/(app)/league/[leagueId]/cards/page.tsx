@@ -28,7 +28,8 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { useToast } from "@/hooks/use-toast";
 import useEmblaCarousel from 'embla-carousel-react'
 import { TeamHelmet } from "@/components/team-helmet";
-
+import { motion } from 'framer-motion';
+import { LightningBurst } from '@/components/animations/LightningBurst';
 
 const tierStyles: Record<CardTier, { bg: string; text: string; border: string; glow: string; shadow: string; }> = {
     Legendary: { bg: 'bg-yellow-400/10', text: 'text-yellow-300', border: 'border-yellow-400/50', glow: '[--glow-color:theme(colors.yellow.400)]', shadow: 'shadow-yellow-400/20' },
@@ -184,6 +185,7 @@ export default function LegendaryCardsPage() {
     const [cardToPlay, setCardToPlay] = useState<LegendaryCard | null>(null);
     const [cardToDelete, setCardToDelete] = useState<LegendaryCard | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<{ position: string; index: number } | null>(null);
+    const [isActivated, setIsActivated] = useState(false);
 
     const eligibleSlots = useMemo(() => {
       if (!starterSlots || !cardToPlay) return [];
@@ -228,7 +230,7 @@ const handlePlayCard = (card: LegendaryCard) => {
   setCardToPlay(card);
 };
 
-    const handleConfirmPlay = () => {
+        const handleConfirmPlay = () => {
         if (!firestore || !cardToPlay || !selectedSlot || !userTeam) return;
 
         const cardRef = doc(firestore, 'leagues', leagueId, 'teams', userTeam.id, 'cards', cardToPlay.id);
@@ -240,23 +242,27 @@ const handlePlayCard = (card: LegendaryCard) => {
 
         updateDoc(cardRef, updateData)
             .then(() => {
-                toast({
-                    title: "Legendary Card Activated!",
-                    description: `The Legendary ${cardToPlay.position} card is now pending for this week's matchup.`,
-                });
+            toast({
+                title: "Legendary Card Activated!",
+                description: `The Legendary ${cardToPlay.position} card is now pending for this week's matchup.`,
+            });
+
+            // ← TRIGGER ANIMATION HERE
+            setIsActivated(true);
+                setTimeout(() => setIsActivated(false), 2500); // 2.5s for full effect
             })
             .catch(error => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: cardRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData
-                }));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: cardRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            }));
             })
             .finally(() => {
-                setCardToPlay(null);
-                setSelectedSlot(null);
+            setCardToPlay(null);
+            setSelectedSlot(null);
             });
-    };
+        };
     
     const handleDeactivateCard = (card: LegendaryCard) => {
         if (!firestore || !userTeam) return;
@@ -399,6 +405,19 @@ const handlePlayCard = (card: LegendaryCard) => {
                   </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+{/* ←←← ADD THIS BLOCK HERE */}
+            {isActivated && (
+              <LightningBurst 
+                isActivated={isActivated} 
+                tierColor={
+                  cardToPlay?.tier === 'Legendary' ? '#fbbf24' :
+                  cardToPlay?.tier === 'Epic' ? '#a78bfa' :
+                  cardToPlay?.tier === 'Rare' ? '#60a5fa' :
+                  '#9ca3af'
+                } 
+              />
+            )}
+
         </>
     )
 }
